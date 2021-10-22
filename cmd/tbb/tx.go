@@ -7,9 +7,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const flagFrom = "from"
-const flagTo = "to"
-const flagValue = "value"
+const (
+	flagFrom  = "from"
+	flagTo    = "to"
+	flagValue = "value"
+	flagData  = "data"
+)
 
 func txCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -27,19 +30,20 @@ func txCmd() *cobra.Command {
 			from, _ := cmd.Flags().GetString(flagFrom)
 			to, _ := cmd.Flags().GetString(flagTo)
 			value, _ := cmd.Flags().GetUint(flagValue)
+			data, _ := cmd.Flags().GetString(flagData)
 
 			fromAcc := database.NewAccount(from)
 			toAcc := database.NewAccount(to)
-			tx := database.NewTx(fromAcc, toAcc, value, "")
+			tx := database.NewTx(fromAcc, toAcc, value, data)
 			state, err := database.NewStateFromDisk()
 			if err != nil {
 				panic(err)
 			}
 			defer state.Close()
-			if err := state.Add(tx); err != nil {
+			if err := state.AddTx(tx); err != nil {
 				panic(err)
 			}
-			if err := state.Persist(); err != nil {
+			if _, err := state.Persist(); err != nil {
 				panic(err)
 			}
 			fmt.Println("Tx successfully added to the ledger.")
@@ -53,6 +57,8 @@ func txCmd() *cobra.Command {
 
 	add.Flags().Uint(flagValue, 0, "How many tokens to send")
 	add.MarkFlagRequired(flagValue)
+
+	add.Flags().String(flagData, "", "Possible values: 'reward'")
 
 	cmd.AddCommand(add)
 	return cmd

@@ -28,7 +28,7 @@ func balancesCmd() *cobra.Command {
 				panic(err)
 			}
 			defer state.Close()
-			fmt.Println("Accounts balances:")
+			fmt.Printf("Accounts balances at %x:\n", state.LatestBlockHash())
 			fmt.Println("___________________")
 			fmt.Println("")
 			for acc, balance := range state.Balances {
