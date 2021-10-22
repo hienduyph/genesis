@@ -23,7 +23,8 @@ func balancesCmd() *cobra.Command {
 		Use:   "list",
 		Short: "Lists all balances",
 		Run: func(cmd *cobra.Command, args []string) {
-			state, err := database.NewStateFromDisk()
+			dataDir, _ := cmd.Flags().GetString(flagDataDir)
+			state, err := database.NewStateFromDisk(dataDir)
 			if err != nil {
 				panic(err)
 			}
@@ -36,6 +37,8 @@ func balancesCmd() *cobra.Command {
 			}
 		},
 	}
+	addDefaultRequiredFlags(list)
+
 	cmd.AddCommand(list)
 	return cmd
 }

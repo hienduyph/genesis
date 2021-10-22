@@ -6,23 +6,21 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 )
 
 var ErrInsufficientBalance = errors.New("insufficient balance")
 
-func NewStateFromDisk() (*State, error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("read cwd failed: %w", err)
+func NewStateFromDisk(dataDir string) (*State, error) {
+	if err := initDataIfNotExists(dataDir); err != nil {
+		return nil, fmt.Errorf("init data dir failed: %w", err)
 	}
-	genesisFile := filepath.Join(cwd, "database", "genesis.json")
+	genesisFile := getGenesisJSONPathFile(dataDir)
 	gen, err := loadGenesis(genesisFile)
 	if err != nil {
 		return nil, err
 	}
-	txLogs := filepath.Join(cwd, "database", "block.db")
+	txLogs := getBlocksDBFilePath(dataDir)
 	f, err := os.OpenFile(txLogs, os.O_APPEND|os.O_RDWR, 0600)
 	if err != nil {
 		return nil, fmt.Errorf("open tx logs file failed: %w", err)
