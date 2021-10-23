@@ -24,7 +24,7 @@ func balancesCmd() *cobra.Command {
 		Short: "Lists all balances",
 		Run: func(cmd *cobra.Command, args []string) {
 			dataDir, _ := cmd.Flags().GetString(flagDataDir)
-			state, err := database.NewStateFromDisk(dataDir)
+			state, err := database.NewState(&database.StateConfig{DataDir: dataDir})
 			if err != nil {
 				panic(err)
 			}

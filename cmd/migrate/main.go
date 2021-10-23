@@ -9,7 +9,7 @@ import (
 
 func main() {
 	cwd, _ := os.Getwd()
-	state, err := database.NewStateFromDisk(cwd)
+    state, err := database.NewState(&database.StateConfig{DataDir: cwd})
 	if err != nil {
 		panic(err)
 	}

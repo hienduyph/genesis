@@ -20,6 +20,7 @@ func main() {
 	tbbCmd.AddCommand(versionCmd)
 	tbbCmd.AddCommand(balancesCmd())
 	tbbCmd.AddCommand(txCmd())
+	tbbCmd.AddCommand(runCmd())
 
 	if err := tbbCmd.ExecuteContext(ctx); err != nil {
 		panic(err)

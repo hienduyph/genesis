@@ -37,7 +37,7 @@ func txCmd() *cobra.Command {
 			fromAcc := database.NewAccount(from)
 			toAcc := database.NewAccount(to)
 			tx := database.NewTx(fromAcc, toAcc, value, data)
-			state, err := database.NewStateFromDisk(dataDir)
+			state, err := database.NewState(&database.StateConfig{DataDir: dataDir})
 			if err != nil {
 				panic(err)
 			}

@@ -11,7 +11,12 @@ import (
 
 var ErrInsufficientBalance = errors.New("insufficient balance")
 
-func NewStateFromDisk(dataDir string) (*State, error) {
+type StateConfig struct {
+	DataDir string
+}
+
+func NewState(c *StateConfig) (*State, error) {
+	dataDir := c.DataDir
 	if err := initDataIfNotExists(dataDir); err != nil {
 		return nil, fmt.Errorf("init data dir failed: %w", err)
 	}
