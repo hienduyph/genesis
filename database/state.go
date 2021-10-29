@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"os"
 	"time"
+
+	"github.com/hienduyph/goss/logger"
 )
 
 var ErrInsufficientBalance = errors.New("insufficient balance")
@@ -38,6 +40,7 @@ func NewState(c *StateConfig) (*State, error) {
 		txMempool:       make([]Tx, 0, 1000),
 		dbFile:          f,
 		latestBlockHash: Hash{},
+		latestBlock:     Block{},
 	}
 	for acc, balance := range gen.Balances {
 		state.Balances[acc] = balance
@@ -47,14 +50,19 @@ func NewState(c *StateConfig) (*State, error) {
 		if err := scaner.Err(); err != nil {
 			return nil, fmt.Errorf("scane txlogs failed: %w", err)
 		}
+		b := scaner.Bytes()
+		if len(b) == 0 {
+			break
+		}
 		var block BlockFS
-		if err := json.Unmarshal(scaner.Bytes(), &block); err != nil {
+		if err := json.Unmarshal(b, &block); err != nil {
 			return nil, fmt.Errorf("invalid row txlog: %w", err)
 		}
 		if err := state.applyBlock(block.Value); err != nil {
 			return nil, fmt.Errorf("apply tx failed: %w", err)
 		}
 		state.latestBlockHash = block.Key
+		state.latestBlock = block.Value
 	}
 	return state, nil
 }
@@ -64,10 +72,15 @@ type State struct {
 	txMempool       []Tx
 	dbFile          *os.File
 	latestBlockHash Hash
+	latestBlock     Block
 }
 
-func (s State) LatestBlockHash() Hash {
+func (s *State) LatestBlockHash() Hash {
 	return s.latestBlockHash
+}
+
+func (s *State) LatestBlock() Block {
+	return s.latestBlock
 }
 
 func (s *State) Close() {
@@ -92,7 +105,20 @@ func (s *State) AddTx(tx Tx) error {
 }
 
 func (s *State) Persist() (Hash, error) {
-	block := NewBlock(s.latestBlockHash, uint64(time.Now().Unix()), s.txMempool)
+	block := NewBlock(
+		s.latestBlockHash,
+		s.latestBlock.Header.Number+1,
+		uint64(time.Now().Unix()),
+		s.txMempool,
+	)
+	logger.Info("prepare", "block", block, "latest", s.latestBlock)
+	return s.MigrateBlock(block)
+}
+
+// MigrateBlock
+// internal funcs, use for migrate only
+func (s *State) MigrateBlock(block Block) (Hash, error) {
+	logger.Info("prepare", "block", block, "latest", s.latestBlock)
 	blockHash, err := block.Hash()
 	if err != nil {
 		return Hash{}, fmt.Errorf("hashed failed: %w", err)
@@ -108,6 +134,8 @@ func (s *State) Persist() (Hash, error) {
 		return Hash{}, fmt.Errorf("flush to disk failed: %w", err)
 	}
 	s.latestBlockHash = blockHash
+	s.latestBlock = block
+
 	// reset mem pool
 	s.txMempool = s.txMempool[:0]
 	return s.latestBlockHash, nil

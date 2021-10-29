@@ -11,5 +11,6 @@ var GraphSet = wire.NewSet(
 	NewNode,
 	handlers.NewBalance,
 	handlers.NewTx,
+	handlers.NewNode,
 	database.NewState,
 )

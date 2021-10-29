@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/hienduyph/genesis/database"
+	"github.com/hienduyph/genesis/node/peer"
 	"github.com/hienduyph/goss/logger"
 	"github.com/hienduyph/goss/utils/shutdowns"
 	"github.com/spf13/cobra"
@@ -19,7 +20,16 @@ func runCmd() *cobra.Command {
 			defer done()
 
 			dataDir, _ := cmd.Flags().GetString(flagDataDir)
-			n, e := newNode(ctx, &database.StateConfig{DataDir: dataDir})
+			bootstrap := []peer.PeerNode{
+				{
+					IP:          "18.184.213.146",
+					Port:        8080,
+					IsBootstrap: true,
+					IsActive:    true,
+				},
+			}
+
+			n, e := newNode(ctx, &database.StateConfig{DataDir: dataDir}, bootstrap)
 			logger.FatalIf(e, "create nodes")
 			defer n.Close(context.Background())
 

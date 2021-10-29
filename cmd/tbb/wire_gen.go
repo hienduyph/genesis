@@ -10,17 +10,19 @@ import (
 	"github.com/hienduyph/genesis/database"
 	"github.com/hienduyph/genesis/node"
 	"github.com/hienduyph/genesis/node/handlers"
+	"github.com/hienduyph/genesis/node/peer"
 )
 
 // Injectors from di.go:
 
-func newNode(ctx context.Context, stateConfig *database.StateConfig) (*node.Node, error) {
+func newNode(ctx context.Context, stateConfig *database.StateConfig, peers []peer.PeerNode) (*node.Node, error) {
 	state, err := database.NewState(stateConfig)
 	if err != nil {
 		return nil, err
 	}
 	balance := handlers.NewBalance(state)
 	tx := handlers.NewTx(state)
-	nodeNode := node.NewNode(state, balance, tx)
+	handlersNode := handlers.NewNode(state, peers)
+	nodeNode := node.NewNode(state, peers, balance, tx, handlersNode)
 	return nodeNode, nil
 }

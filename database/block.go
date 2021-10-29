@@ -18,9 +18,14 @@ func (h *Hash) UnmarshalText(data []byte) error {
 	return e
 }
 
-func NewBlock(prevHash Hash, ts uint64, payload []Tx) Block {
+func NewBlock(
+	prevHash Hash,
+	num uint64,
+	ts uint64,
+	payload []Tx,
+) Block {
 	return Block{
-		Header: BlockHeader{Parent: prevHash, Time: ts},
+		Header: BlockHeader{Parent: prevHash, Time: ts, Number: num},
 		TXs:    payload,
 	}
 }
@@ -33,6 +38,7 @@ type Block struct {
 type BlockHeader struct {
 	Parent Hash   `json:"parent"`
 	Time   uint64 `json:"time"`
+	Number uint64 `json:"number"`
 }
 
 type BlockFS struct {

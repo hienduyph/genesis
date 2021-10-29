@@ -21,6 +21,7 @@ func main() {
 	tbbCmd.AddCommand(balancesCmd())
 	tbbCmd.AddCommand(txCmd())
 	tbbCmd.AddCommand(runCmd())
+	tbbCmd.AddCommand(migrateCmd())
 
 	if err := tbbCmd.ExecuteContext(ctx); err != nil {
 		panic(err)
