@@ -28,7 +28,7 @@ type FromBlockReq struct {
 }
 
 type SyncRes struct {
-	Blocks []*database.Block `json:"blocks"`
+	Blocks []database.Block `json:"blocks"`
 }
 
 func (s *SyncHandler) FromBlockHandler(r *http.Request) (interface{}, error) {
@@ -49,8 +49,8 @@ func (s *SyncHandler) FromBlockHandler(r *http.Request) (interface{}, error) {
 
 }
 
-func (s *Node) sync(ctx context.Context) error {
-	logger.Info("start the syncing daemon", "peers", s.knownPeers)
+func (n *Node) sync(ctx context.Context) error {
+	logger.Info("start the syncing daemon", "peers", n.knownPeers)
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 	for {
@@ -60,30 +60,30 @@ func (s *Node) sync(ctx context.Context) error {
 			return nil
 
 		case <-ticker.C:
-			s.fetchNewBlocksAndPeers()
+			n.doSync()
 		}
 	}
 }
-func (s *Node) fetchNewBlocksAndPeers() {
+func (n *Node) doSync() {
 	logger.Debug("Polling for new peers and status")
-	for _, p := range s.knownPeers {
+	for _, p := range n.knownPeers {
 		status, e := queryPeerStatus(p)
 		if e != nil {
 			logger.Error(e, "fetch failed", "peer", p)
 			continue
 		}
-		localBlockNumber := s.db.LatestBlock().Header.Number
+		localBlockNumber := n.db.LatestBlock().Header.Number
 		if localBlockNumber < status.Number {
 			newBlocksCound := status.Number - localBlockNumber
 			logger.Info("founds new blocks from peer", "num", newBlocksCound, "peer", p.TcpAddress())
 		}
-		// add back to peer nodes
-		for _, statusPeer := range status.KnownPeers {
-			newPeer, isKnowPeer := s.knownPeers[statusPeer.TcpAddress()]
+
+		for _, maybeNewPeer := range status.KnownPeers {
+			_, isKnowPeer := n.knownPeers[maybeNewPeer.TcpAddress()]
 			if !isKnowPeer {
-				logger.Debug("Found new peer", "peer", newPeer.TcpAddress())
+				logger.Debug("Found new peer", "peer", maybeNewPeer.TcpAddress())
 			}
-			s.knownPeers[statusPeer.TcpAddress()] = newPeer
+			n.knownPeers[maybeNewPeer.TcpAddress()] = maybeNewPeer
 		}
 	}
 }

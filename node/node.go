@@ -52,24 +52,23 @@ func NewNode(
 }
 
 type Node struct {
-	server     *http.Server
-	port       uint64
-	knownPeers map[string]peer.PeerNode
+	server *http.Server
+	port   uint64
 
 	db *database.State
 }
 
-func (s *Node) Start(parentCtx context.Context) error {
+func (n *Node) Start(parentCtx context.Context) error {
 	eg, ctx := errgroup.WithContext(parentCtx)
 	eg.Go(func() error {
-		return httpx.Run(ctx, s.server)
+		return httpx.Run(ctx, n.server)
 	})
 	eg.Go(func() error {
-		return s.sync(ctx)
+		return n.sync(ctx)
 	})
 	return eg.Wait()
 }
 
-func (s *Node) Close(ctx context.Context) {
-	s.db.Close()
+func (n *Node) Close(ctx context.Context) {
+	n.db.Close()
 }

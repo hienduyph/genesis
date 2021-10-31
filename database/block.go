@@ -10,12 +10,16 @@ import (
 type Hash [32]byte
 
 func (h Hash) MarshalText() ([]byte, error) {
-	return []byte(hex.EncodeToString(h[:])), nil
+	return []byte(h.Hex()), nil
 }
 
 func (h *Hash) UnmarshalText(data []byte) error {
 	_, e := hex.Decode(h[:], data)
 	return e
+}
+
+func (h Hash) Hex() string {
+	return hex.EncodeToString(h[:])
 }
 
 func NewBlock(

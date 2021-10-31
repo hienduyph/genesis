@@ -3,6 +3,7 @@ package node
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/hienduyph/genesis/database"
 	"github.com/hienduyph/goss/errorx"
@@ -36,18 +37,21 @@ func (tx *TxHandler) Add(r *http.Request) (interface{}, error) {
 		return nil, fmt.Errorf("decode body failed: `%s` %w", e.Error(), errorx.ErrBadInput)
 	}
 
-	x := database.NewTx(
+	t := database.NewTx(
 		database.Account(in.From),
 		database.NewAccount(in.To),
 		in.Value,
 		in.Data,
 	)
-	if e := tx.db.AddTx(x); e != nil {
+	block := database.NewBlock(
+		tx.db.LatestBlockHash(),
+		tx.db.LatestBlock().Header.Number+1,
+		uint64(time.Now().Unix()),
+		[]database.Tx{t},
+	)
+	hash, e := tx.db.AddBlock(block)
+	if e != nil {
 		return nil, fmt.Errorf("add tx failed: %w", e)
-	}
-	hash, err := tx.db.Persist()
-	if err != nil {
-		return nil, fmt.Errorf("persisted failed: %w", err)
 	}
 	return &TxAddResp{Hash: hash}, nil
 }
