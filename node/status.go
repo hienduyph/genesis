@@ -1,4 +1,4 @@
-package handlers
+package node
 
 import (
 	"net/http"
@@ -7,18 +7,18 @@ import (
 	"github.com/hienduyph/genesis/node/peer"
 )
 
-func NewNode(
+func NewStateHandler(
 	db *database.State,
 
 	bootstraps []peer.PeerNode,
-) *Node {
-	return &Node{
+) *StateHandler {
+	return &StateHandler{
 		db:         db,
 		bootstraps: bootstraps,
 	}
 }
 
-type Node struct {
+type StateHandler struct {
 	db         *database.State
 	bootstraps []peer.PeerNode
 }
@@ -29,7 +29,7 @@ type StatusResp struct {
 	KnownPeers []peer.PeerNode `json:"peers_known"`
 }
 
-func (s *Node) Status(r *http.Request) (interface{}, error) {
+func (s *StateHandler) Status(r *http.Request) (interface{}, error) {
 	return &StatusResp{
 		Hash:       s.db.LatestBlockHash(),
 		Number:     s.db.LatestBlock().Header.Number,

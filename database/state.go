@@ -64,6 +64,7 @@ func NewState(c *StateConfig) (*State, error) {
 		state.latestBlockHash = block.Key
 		state.latestBlock = block.Value
 	}
+	logger.Info("loaded state", "datadir", dataDir, "balances", state.Balances)
 	return state, nil
 }
 

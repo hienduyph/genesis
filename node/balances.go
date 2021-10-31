@@ -1,4 +1,4 @@
-package handlers
+package node
 
 import (
 	"net/http"
@@ -6,15 +6,15 @@ import (
 	"github.com/hienduyph/genesis/database"
 )
 
-func NewBalance(
+func NewBalanceHandler(
 	db *database.State,
-) *Balance {
-	return &Balance{
+) *BalanceHandler {
+	return &BalanceHandler{
 		db: db,
 	}
 }
 
-type Balance struct {
+type BalanceHandler struct {
 	db *database.State
 }
 
@@ -23,7 +23,7 @@ type BalanceListResp struct {
 	Balances map[database.Account]uint `json:"balances"`
 }
 
-func (b *Balance) List(r *http.Request) (interface{}, error) {
+func (b *BalanceHandler) List(r *http.Request) (interface{}, error) {
 	resp := BalanceListResp{
 		Hash:     b.db.LatestBlockHash(),
 		Balances: b.db.Balances,

@@ -1,0 +1,34 @@
+version: "3"
+services:
+  genesis:
+    image: genesis:latest
+    command:
+      - tbb
+      - run
+      - --datadir=/data/.tbb
+    volumes:
+      - ${HOME}/.tbb:/data/.tbb
+
+  node1:
+    image: genesis:latest
+    command:
+      - tbb
+      - run
+      - --datadir
+      - /tmp/.tbb
+      - --bootstraps
+      - genesis:8080
+    links:
+      - genesis
+
+  node2:
+    image: genesis:latest
+    command:
+      - tbb
+      - run
+      - --datadir
+      - /tmp/.tbb
+      - --bootstraps
+      - genesis:8080
+    links:
+      - genesis

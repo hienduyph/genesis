@@ -4,13 +4,12 @@ import (
 	"github.com/google/wire"
 
 	"github.com/hienduyph/genesis/database"
-	"github.com/hienduyph/genesis/node/handlers"
 )
 
 var GraphSet = wire.NewSet(
+	NewBalanceHandler,
+	NewTxHandler,
+	NewStateHandler,
 	NewNode,
-	handlers.NewBalance,
-	handlers.NewTx,
-	handlers.NewNode,
 	database.NewState,
 )

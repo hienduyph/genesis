@@ -1,4 +1,4 @@
-package handlers
+package node
 
 import (
 	"fmt"
@@ -9,13 +9,13 @@ import (
 	"github.com/hienduyph/goss/jsonx"
 )
 
-func NewTx(db *database.State) *Tx {
-	return &Tx{
+func NewTxHandler(db *database.State) *TxHandler {
+	return &TxHandler{
 		db: db,
 	}
 }
 
-type Tx struct {
+type TxHandler struct {
 	db *database.State
 }
 
@@ -30,7 +30,7 @@ type TxAddResp struct {
 	Hash database.Hash `json:"block_hash"`
 }
 
-func (tx *Tx) Add(r *http.Request) (interface{}, error) {
+func (tx *TxHandler) Add(r *http.Request) (interface{}, error) {
 	in := new(TxAddReq)
 	if e := jsonx.NewDecoder(r.Body).Decode(in); e != nil {
 		return nil, fmt.Errorf("decode body failed: `%s` %w", e.Error(), errorx.ErrBadInput)

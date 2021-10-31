@@ -9,7 +9,6 @@ import (
 	"context"
 	"github.com/hienduyph/genesis/database"
 	"github.com/hienduyph/genesis/node"
-	"github.com/hienduyph/genesis/node/handlers"
 	"github.com/hienduyph/genesis/node/peer"
 )
 
@@ -20,9 +19,9 @@ func newNode(ctx context.Context, stateConfig *database.StateConfig, peers []pee
 	if err != nil {
 		return nil, err
 	}
-	balance := handlers.NewBalance(state)
-	tx := handlers.NewTx(state)
-	handlersNode := handlers.NewNode(state, peers)
-	nodeNode := node.NewNode(state, peers, balance, tx, handlersNode)
+	balanceHandler := node.NewBalanceHandler(state)
+	txHandler := node.NewTxHandler(state)
+	stateHandler := node.NewStateHandler(state, peers)
+	nodeNode := node.NewNode(state, peers, balanceHandler, txHandler, stateHandler)
 	return nodeNode, nil
 }

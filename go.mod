@@ -5,7 +5,7 @@ go 1.17
 require (
 	github.com/go-chi/chi/v5 v5.0.4
 	github.com/google/wire v0.5.0
-	github.com/hienduyph/goss v0.0.0-20211023134100-e306619fe9c9
+	github.com/hienduyph/goss v0.0.0-20211031120737-99e47d7497be
 	github.com/spf13/cobra v1.2.1
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 )
@@ -23,5 +23,3 @@ require (
 	go.uber.org/multierr v1.7.0 // indirect
 	go.uber.org/zap v1.19.1 // indirect
 )
-
-replace github.com/hienduyph/goss => /home/hienduyph/q/OpenSources/goss
