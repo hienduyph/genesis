@@ -22,6 +22,7 @@ func newNode(ctx context.Context, stateConfig *database.StateConfig, peers []pee
 	balanceHandler := node.NewBalanceHandler(state)
 	txHandler := node.NewTxHandler(state)
 	stateHandler := node.NewStateHandler(state, peers)
-	nodeNode := node.NewNode(state, peers, balanceHandler, txHandler, stateHandler)
+	syncHandler := node.NewSyncHandler(state)
+	nodeNode := node.NewNode(state, peers, balanceHandler, txHandler, stateHandler, syncHandler)
 	return nodeNode, nil
 }

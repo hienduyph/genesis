@@ -16,6 +16,7 @@ import (
 const (
 	port           = 8080
 	endpointStatus = "/node/status"
+	endpointSync   = "/node/sync"
 )
 
 func NewNode(
@@ -25,11 +26,14 @@ func NewNode(
 	balancesHandler *BalanceHandler,
 	txHandler *TxHandler,
 	nodeHandler *StateHandler,
+	syncHandler *SyncHandler,
 ) *Node {
 	h := chi.NewMux()
 	h.Get("/balances/list", httpx.Handle(balancesHandler.List))
 	h.Post("/tx/add", httpx.Handle(txHandler.Add))
 	h.Get(endpointStatus, httpx.Handle(nodeHandler.Status))
+	h.Get(endpointSync, httpx.Handle(syncHandler.FromBlockHandler))
+
 	addr := fmt.Sprintf(":%v", port)
 	server := &http.Server{
 		Addr:    addr,

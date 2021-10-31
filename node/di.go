@@ -7,9 +7,10 @@ import (
 )
 
 var GraphSet = wire.NewSet(
+	NewNode,
+	database.NewState,
 	NewBalanceHandler,
 	NewTxHandler,
 	NewStateHandler,
-	NewNode,
-	database.NewState,
+	NewSyncHandler,
 )

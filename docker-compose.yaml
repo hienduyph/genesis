@@ -1,18 +1,25 @@
 version: "3"
 services:
   genesis:
-    image: genesis:latest
+    build:
+      dockerfile: ./dev.Dockerfile
     command:
-      - tbb
+      - go
+      - run
+      - ./cmd/tbb
       - run
       - --datadir=/data/.tbb
     volumes:
       - ${HOME}/.tbb:/data/.tbb
+      - .:/src
 
-  node1:
-    image: genesis:latest
+  node:
+    build:
+      dockerfile: ./dev.Dockerfile
     command:
-      - tbb
+      - go
+      - run
+      - ./cmd/tbb
       - run
       - --datadir
       - /tmp/.tbb
@@ -20,15 +27,5 @@ services:
       - genesis:8080
     links:
       - genesis
-
-  node2:
-    image: genesis:latest
-    command:
-      - tbb
-      - run
-      - --datadir
-      - /tmp/.tbb
-      - --bootstraps
-      - genesis:8080
-    links:
-      - genesis
+    volumes:
+      - .:/src

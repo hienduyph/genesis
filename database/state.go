@@ -2,12 +2,14 @@ package database
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"time"
 
+	"github.com/hienduyph/goss/jsonx"
 	"github.com/hienduyph/goss/logger"
 )
 
@@ -41,6 +43,7 @@ func NewState(c *StateConfig) (*State, error) {
 		dbFile:          f,
 		latestBlockHash: Hash{},
 		latestBlock:     Block{},
+		conf:            c,
 	}
 	for acc, balance := range gen.Balances {
 		state.Balances[acc] = balance
@@ -74,6 +77,7 @@ type State struct {
 	dbFile          *os.File
 	latestBlockHash Hash
 	latestBlock     Block
+	conf            *StateConfig
 }
 
 func (s *State) LatestBlockHash() Hash {
@@ -140,6 +144,32 @@ func (s *State) MigrateBlock(block Block) (Hash, error) {
 	// reset mem pool
 	s.txMempool = s.txMempool[:0]
 	return s.latestBlockHash, nil
+}
+
+func (s *State) GetBlockAfter(ctx context.Context, hash Hash) ([]*Block, error) {
+	f, e := os.OpenFile(getBlocksDBFilePath(s.conf.DataDir), os.O_RDONLY, 0600)
+	if e != nil {
+		return nil, fmt.Errorf("read dbfile faild: %w", e)
+	}
+	defer f.Close()
+	blocks := make([]*Block, 0, 1000)
+	shouldStartCollect := false
+	scaner := bufio.NewScanner(f)
+	for scaner.Scan() {
+		if err := scaner.Err(); err != nil {
+			return nil, err
+		}
+		blockFs := new(BlockFS)
+		if err := jsonx.Unmarshal(scaner.Bytes(), blockFs); err != nil {
+			return nil, err
+		}
+		if shouldStartCollect {
+			blocks = append(blocks, &blockFs.Value)
+			continue
+		}
+		shouldStartCollect = blockFs.Key == hash
+	}
+	return blocks, nil
 }
 
 func (s *State) applyBlock(b Block) error {
