@@ -4,58 +4,57 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/hienduyph/goss/httpx"
+	"github.com/hienduyph/goss/logger"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/hienduyph/genesis/database"
-	"github.com/hienduyph/genesis/node/peer"
 )
 
 const (
-	port           = 8080
-	endpointStatus = "/node/status"
-	endpointSync   = "/node/sync"
+	Port            = 8080
+	endpointStatus  = "/node/status"
+	endpointSync    = "/node/sync"
+	endpointAddPeer = "/node/peer"
 )
 
 func NewNode(
 	db *database.State,
-	bootstraps []peer.PeerNode,
+	peerState *PeerState,
 
 	balancesHandler *BalanceHandler,
 	txHandler *TxHandler,
 	nodeHandler *StateHandler,
 	syncHandler *SyncHandler,
+	peerHandler *PeerHandler,
 ) *Node {
 	h := chi.NewMux()
 	h.Get("/balances/list", httpx.Handle(balancesHandler.List))
 	h.Post("/tx/add", httpx.Handle(txHandler.Add))
 	h.Get(endpointStatus, httpx.Handle(nodeHandler.Status))
 	h.Get(endpointSync, httpx.Handle(syncHandler.FromBlockHandler))
+	h.Handle(endpointAddPeer, httpx.Handle(peerHandler.Add))
 
-	addr := fmt.Sprintf(":%v", port)
+	addr := fmt.Sprintf(":%v", Port)
 	server := &http.Server{
 		Addr:    addr,
 		Handler: h,
 	}
-	peers := make(map[string]peer.PeerNode)
-	for _, p := range bootstraps {
-		peers[p.TcpAddress()] = p
-	}
 	return &Node{
-		server:     server,
-		db:         db,
-		port:       port,
-		knownPeers: peers,
+		server:    server,
+		db:        db,
+		peerState: peerState,
 	}
 }
 
 type Node struct {
 	server *http.Server
-	port   uint64
 
-	db *database.State
+	db        *database.State
+	peerState *PeerState
 }
 
 func (n *Node) Start(parentCtx context.Context) error {
@@ -67,6 +66,22 @@ func (n *Node) Start(parentCtx context.Context) error {
 		return n.sync(ctx)
 	})
 	return eg.Wait()
+}
+
+func (n *Node) sync(ctx context.Context) error {
+	logger.Info("start the syncing daemon", "peers", n.peerState.knownPeers)
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Info("[sync] got closed signal")
+			return nil
+
+		case <-ticker.C:
+			n.peerState.doSync()
+		}
+	}
 }
 
 func (n *Node) Close(ctx context.Context) {

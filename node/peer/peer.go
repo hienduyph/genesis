@@ -7,6 +7,7 @@ type PeerNode struct {
 	Port        uint64 `json:"port"`
 	IsBootstrap bool   `json:"is_bootstrap"`
 	IsActive    bool   `json:"is_active"`
+	Connected   bool   `json:"connected"`
 }
 
 func (p PeerNode) TcpAddress() string {

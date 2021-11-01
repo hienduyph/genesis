@@ -31,6 +31,7 @@ func NewState(c *StateConfig) (*State, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	txLogs := getBlocksDBFilePath(dataDir)
 	f, err := os.OpenFile(txLogs, os.O_APPEND|os.O_RDWR, 0600)
 	if err != nil {
@@ -46,10 +47,12 @@ func NewState(c *StateConfig) (*State, error) {
 		latestBlockHash: Hash{},
 		latestBlock:     Block{},
 		conf:            c,
+		hasBlock:        false,
 	}
 	for acc, balance := range gen.Balances {
 		state.Balances[acc] = balance
 	}
+	logger.Debug("initial states", "balances", state.Balances)
 
 	for scaner.Scan() {
 		if err := scaner.Err(); err != nil {
@@ -68,6 +71,7 @@ func NewState(c *StateConfig) (*State, error) {
 		}
 		state.latestBlockHash = block.Key
 		state.latestBlock = block.Value
+		state.hasBlock = true
 	}
 	logger.Info("loaded state", "datadir", dataDir, "balances", state.Balances)
 	return state, nil
@@ -80,6 +84,7 @@ type State struct {
 	latestBlockHash Hash
 	latestBlock     Block
 	conf            *StateConfig
+	hasBlock        bool
 }
 
 func (s *State) LatestBlockHash() Hash {
@@ -92,6 +97,13 @@ func (s *State) LatestBlock() Block {
 
 func (s *State) Close() error {
 	return s.dbFile.Close()
+}
+
+func (s *State) NextBlockNumber() uint64 {
+	if !s.hasBlock {
+		return 0
+	}
+	return s.latestBlock.Header.Number + 1
 }
 
 func (s *State) AddBlocks(blocks []Block) error {
@@ -126,6 +138,7 @@ func (s *State) AddBlock(b Block) (Hash, error) {
 	s.Balances = pendingState.Balances
 	s.latestBlockHash = blockHash
 	s.latestBlock = b
+	s.hasBlock = true
 	return blockHash, nil
 }
 
@@ -170,12 +183,14 @@ func (s *State) apply(tx Tx) error {
 }
 
 func (s *State) copy() *State {
-	c := &State{}
-	c.latestBlock = s.latestBlock
-	c.latestBlockHash = s.latestBlockHash
-	c.txMempool = append([]Tx(nil), s.txMempool...)
-	c.Balances = make(map[Account]uint, len(s.Balances))
-	for k, v := range c.Balances {
+	c := &State{
+		latestBlock:     s.latestBlock,
+		hasBlock:        s.hasBlock,
+		latestBlockHash: s.latestBlockHash,
+		txMempool:       append([]Tx(nil), s.txMempool...),
+		Balances:        make(map[Account]uint, len(s.Balances)),
+	}
+	for k, v := range s.Balances {
 		c.Balances[k] = v
 	}
 	return c
@@ -183,11 +198,11 @@ func (s *State) copy() *State {
 
 func applyBlock(b Block, s *State) error {
 	nextExpectedBlockNumver := s.latestBlock.Header.Number + 1
-	if b.Header.Number != nextExpectedBlockNumver {
+	if s.hasBlock && b.Header.Number != nextExpectedBlockNumver {
 		return fmt.Errorf("next expected block must `%d` not `%d`, %w", nextExpectedBlockNumver, b.Header.Number, errorx.ErrBadInput)
 	}
 
-	if s.latestBlock.Header.Number > 0 && !reflect.DeepEqual(b.Header.Parent, s.latestBlockHash) {
+	if s.hasBlock && s.latestBlock.Header.Number > 0 && !reflect.DeepEqual(b.Header.Parent, s.latestBlockHash) {
 		return fmt.Errorf("next block parent hash must be `%x` not `%x`", s.latestBlockHash, b.Header.Parent)
 	}
 	return applyTXs(b.TXs, s)
@@ -203,6 +218,7 @@ func applyTXs(txs []Tx, s *State) error {
 }
 
 func applyTx(tx Tx, s *State) error {
+	logger.Debug("applyTx", "tx", tx, "balances", s.Balances)
 	if tx.IsReward() {
 		s.Balances[tx.To] += tx.Value
 		return nil

@@ -28,14 +28,14 @@ var migrateCmd = func() *cobra.Command {
 
 			block0 := database.NewBlock(
 				database.Hash{},
-				0,
+				state.NextBlockNumber(),
 				uint64(time.Now().Unix()),
 				[]database.Tx{
 					database.NewTx("q", "q", 3, ""),
 					database.NewTx("q", "q", 700, "reward"),
 				},
 			)
-			block0hash, err := state.MigrateBlock(block0)
+			block0hash, err := state.AddBlock(block0)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				os.Exit(1)
@@ -43,7 +43,7 @@ var migrateCmd = func() *cobra.Command {
 
 			block1 := database.NewBlock(
 				block0hash,
-				1,
+				state.NextBlockNumber(),
 				uint64(time.Now().Unix()),
 				[]database.Tx{
 					database.NewTx("q", "babayaga", 2000, ""),
@@ -55,7 +55,7 @@ var migrateCmd = func() *cobra.Command {
 				},
 			)
 
-			block1hash, err := state.MigrateBlock(block1)
+			block1hash, err := state.AddBlock(block1)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				os.Exit(1)
@@ -63,14 +63,14 @@ var migrateCmd = func() *cobra.Command {
 
 			block2 := database.NewBlock(
 				block1hash,
-				2,
+				state.NextBlockNumber(),
 				uint64(time.Now().Unix()),
 				[]database.Tx{
 					database.NewTx("q", "q", 24700, "reward"),
 				},
 			)
 
-			_, err = state.MigrateBlock(block2)
+			_, err = state.AddBlock(block2)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
 				os.Exit(1)

@@ -15,15 +15,17 @@ import (
 
 // Injectors from di.go:
 
-func newNode(ctx context.Context, stateConfig *database.StateConfig, peers []peer.PeerNode) (*node.Node, error) {
+func newNode(ctx context.Context, stateConfig *database.StateConfig, peers []peer.PeerNode, advertisingInfo peer.PeerNode) (*node.Node, error) {
 	state, err := database.NewState(stateConfig)
 	if err != nil {
 		return nil, err
 	}
+	peerState := node.NewPeerState(peers, advertisingInfo, state)
 	balanceHandler := node.NewBalanceHandler(state)
 	txHandler := node.NewTxHandler(state)
 	stateHandler := node.NewStateHandler(state, peers)
 	syncHandler := node.NewSyncHandler(state)
-	nodeNode := node.NewNode(state, peers, balanceHandler, txHandler, stateHandler, syncHandler)
+	peerHandler := node.NewPeerHandler(peerState)
+	nodeNode := node.NewNode(state, peerState, balanceHandler, txHandler, stateHandler, syncHandler, peerHandler)
 	return nodeNode, nil
 }

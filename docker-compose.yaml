@@ -9,6 +9,8 @@ services:
       - ./cmd/tbb
       - run
       - --datadir=/data/.tbb
+      - --advertising-address
+      - genesis:8080
     volumes:
       - ${HOME}/.tbb:/data/.tbb
       - .:/src

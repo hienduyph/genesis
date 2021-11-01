@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"github.com/hienduyph/goss/logger"
 )
 
 func getDatabaseDirPath(dataDir string) string {
@@ -23,7 +25,8 @@ func initDataIfNotExists(dataDir string) error {
 	if fileExist(getGenesisJSONPathFile(dataDir)) {
 		return nil
 	}
-	fmt.Printf("Initializing system at `%s`\n", dataDir)
+
+	logger.Info("Initializing system", "datadir", dataDir)
 	if err := os.MkdirAll(getDatabaseDirPath(dataDir), os.ModePerm); err != nil {
 		return fmt.Errorf("create db dir failed: %w", err)
 	}

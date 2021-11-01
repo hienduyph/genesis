@@ -2,18 +2,24 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net"
+	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
 
 	"github.com/hienduyph/genesis/database"
+	"github.com/hienduyph/genesis/node"
 	"github.com/hienduyph/genesis/node/peer"
 	"github.com/hienduyph/goss/logger"
 	"github.com/spf13/cobra"
 )
 
-var bootstrapFlags = "bootstraps"
+const (
+	bootstrapFlags       = "bootstraps"
+	advertisingInfoFlags = "advertising-address"
+)
 
 func runCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -28,23 +34,25 @@ func runCmd() *cobra.Command {
 			dataDir, _ := cmd.Flags().GetString(flagDataDir)
 			bootstrap := make([]peer.PeerNode, 0, len(raws))
 			for _, item := range raws {
-				host, portRaw, err := net.SplitHostPort(item)
-				if err != nil {
-					logger.FatalIf(err, "parse bootrap node error", "item", item)
-				}
-				port, err := strconv.Atoi(portRaw)
-				if err != nil {
-				}
-				p := peer.PeerNode{
-					IP:          host,
-					Port:        uint64(port),
-					IsBootstrap: true,
-					IsActive:    true,
-				}
+				p, err := hostPortToPeer(item)
+				logger.FatalIf(err, "parse bootrap node error", "item", item)
+				p.IsBootstrap = true
+				p.IsActive = true
 				bootstrap = append(bootstrap, p)
 			}
 
-			n, e := newNode(ctx, &database.StateConfig{DataDir: dataDir}, bootstrap)
+			currNodeAddr, _ := cmd.Flags().GetString(advertisingInfoFlags)
+			if currNodeAddr == "" {
+				containerHostname, err := os.Hostname()
+				logger.FatalIf(err, "get host error")
+				currNodeAddr = fmt.Sprintf("%s:%d", containerHostname, node.Port)
+			}
+			nodeInfo, err := hostPortToPeer(currNodeAddr)
+			logger.FatalIf(err, "parse bootrap node error", "item", currNodeAddr)
+
+			logger.Info("advertising info", "node", nodeInfo)
+
+			n, e := newNode(ctx, &database.StateConfig{DataDir: dataDir}, bootstrap, nodeInfo)
 			logger.FatalIf(e, "create nodes")
 			defer n.Close(context.Background())
 
@@ -56,5 +64,21 @@ func runCmd() *cobra.Command {
 	}
 	addDefaultRequiredFlags(cmd)
 	cmd.Flags().StringSlice(bootstrapFlags, nil, "list of bootrap nodes")
+	cmd.Flags().String(advertisingInfoFlags, "", "host:port for the advertising nodes, default is current ip and port of system")
 	return cmd
+}
+
+func hostPortToPeer(item string) (peer.PeerNode, error) {
+	host, portRaw, err := net.SplitHostPort(item)
+	if err != nil {
+		return peer.PeerNode{}, err
+	}
+	port, err := strconv.Atoi(portRaw)
+	if err != nil {
+		return peer.PeerNode{}, err
+	}
+	return peer.PeerNode{
+		IP:   host,
+		Port: uint64(port),
+	}, nil
 }

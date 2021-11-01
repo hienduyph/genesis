@@ -3,33 +3,23 @@ package node
 import (
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/hienduyph/genesis/node/peer"
 	"github.com/hienduyph/genesis/utils/coders"
 	"github.com/hienduyph/goss/errorx"
+	"github.com/hienduyph/goss/logger"
 )
 
-type PeerState struct {
-	knownPeers map[string]peer.PeerNode
-	ip         string
-	port       uint64
-}
-
-func (p *PeerState) AddPeer(pe peer.PeerNode) {
-	p.knownPeers[pe.TcpAddress()] = pe
-}
-func (p *PeerState) RemovePeer(pe peer.PeerNode) {
-	delete(p.knownPeers, pe.TcpAddress())
-}
-
-func (p *PeerState) IsKnownPeer(pe peer.PeerNode) bool {
-	if pe.IP == p.ip && pe.Port == p.port {
-		return true
+func NewPeerHandler(
+	peerState *PeerState,
+) *PeerHandler {
+	return &PeerHandler{
+		peerState: peerState,
 	}
-	_, isKnowMembers := p.knownPeers[pe.TcpAddress()]
-	return isKnowMembers
 }
 
+// PeerHandler handles p2p system
 type PeerHandler struct {
 	peerState *PeerState
 }
@@ -41,9 +31,18 @@ type AddPeerReq struct {
 	Port uint64 `json:"port"`
 }
 
+func (r AddPeerReq) AsReqURI(endpoint string) string {
+	u := make(url.Values)
+	if e := coders.EncodeQuery(r, u); e != nil {
+		logger.Error(e, "encode peer req failed")
+	}
+	return fmt.Sprintf("%s?%s", endpoint, u.Encode())
+
+}
+
 func (s *PeerHandler) Add(r *http.Request) (interface{}, error) {
 	req := new(AddPeerReq)
-	if err := coders.Query.Decode(req, r.URL.Query()); err != nil {
+	if err := coders.DecodeQuery(req, r.URL.Query()); err != nil {
 		return nil, fmt.Errorf("input input: `%s`; %w", err.Error(), errorx.ErrBadInput)
 	}
 	p := peer.PeerNode{

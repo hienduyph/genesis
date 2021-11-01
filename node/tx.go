@@ -45,7 +45,7 @@ func (tx *TxHandler) Add(r *http.Request) (interface{}, error) {
 	)
 	block := database.NewBlock(
 		tx.db.LatestBlockHash(),
-		tx.db.LatestBlock().Header.Number+1,
+		tx.db.NextBlockNumber(),
 		uint64(time.Now().Unix()),
 		[]database.Tx{t},
 	)

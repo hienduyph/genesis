@@ -15,6 +15,7 @@ func newNode(
 	ctx context.Context,
 	stateConfig *database.StateConfig,
 	peers []peer.PeerNode,
+	advertisingInfo peer.PeerNode,
 ) (*node.Node, error) {
 	wire.Build(node.GraphSet)
 	return nil, nil
