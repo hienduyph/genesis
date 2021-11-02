@@ -15,7 +15,6 @@ import (
 )
 
 var ErrInsufficientBalance = errors.New("insufficient balance")
-var emptyHash = Hash{}
 
 type StateConfig struct {
 	DataDir string

@@ -1,11 +1,14 @@
 package database
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 )
+
+var emptyHash = Hash{}
 
 type Hash [32]byte
 
@@ -20,6 +23,10 @@ func (h *Hash) UnmarshalText(data []byte) error {
 
 func (h Hash) Hex() string {
 	return hex.EncodeToString(h[:])
+}
+
+func (h Hash) IsEmpty() bool {
+	return bytes.Equal(emptyHash[:], h[:])
 }
 
 func NewBlock(

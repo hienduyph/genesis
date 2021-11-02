@@ -103,19 +103,34 @@ func (ps *PeerState) joinKnownPeers(pe peer.PeerNode) error {
 }
 
 func (ps *PeerState) syncBlocks(pe peer.PeerNode, ss *StatusResp) error {
+	log := logger.Factory("syncBlocks").WithValues("status", ss)
+	if ss.Hash.IsEmpty() {
+		log.Info("Peer has no block, skip!")
+		return nil
+	}
 	localBlockNumber := ps.db.LatestBlock().Header.Number
-	if localBlockNumber < ss.Number {
-		newBlocksCound := ss.Number - localBlockNumber
-		logger.Info("founds new blocks from peer", "num", newBlocksCound, "peer", pe.TcpAddress())
+	if ss.Number < localBlockNumber {
+		log.Info("Peer has less blocks than us, skip!")
+		return nil
+	}
 
-		blocks, err := fetchBlocksFromPeer(pe, ps.db.LatestBlockHash())
-		if err != nil {
-			return fmt.Errorf("fetch blocks from peer failed: %w", err)
-		}
+	if ss.Number == 0 && !ps.db.LatestBlockHash().IsEmpty() {
+		log.Info("This is genesis blocks and we've already had in our chains")
+		return nil
+	}
 
-		if err := ps.db.AddBlocks(blocks); err != nil {
-			return fmt.Errorf("apply block to local failed: %w", err)
-		}
+	newBlocksCount := ss.Number - localBlockNumber
+	if localBlockNumber == 0 && ss.Number == 0 {
+		newBlocksCount = 1
+	}
+	log.Info("founds new blocks from peer", "num", newBlocksCount, "peer", pe.TcpAddress())
+
+	blocks, err := fetchBlocksFromPeer(pe, ps.db.LatestBlockHash())
+	if err != nil {
+		return fmt.Errorf("fetch blocks from peer failed: %w", err)
+	}
+	if err := ps.db.AddBlocks(blocks); err != nil {
+		return fmt.Errorf("apply block to local failed: %w", err)
 	}
 	return nil
 }
