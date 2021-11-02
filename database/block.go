@@ -29,15 +29,31 @@ func (h Hash) IsEmpty() bool {
 	return bytes.Equal(emptyHash[:], h[:])
 }
 
+func IsBlockHashValid(hash Hash) bool {
+	const leading = 3
+	for i := 0; i < leading; i++ {
+		if fmt.Sprintf("%x", hash[i]) != "0" {
+			return false
+		}
+	}
+	return fmt.Sprintf("%x", hash[leading+1]) != "0"
+}
+
 func NewBlock(
 	prevHash Hash,
 	num uint64,
+	nonce uint64,
 	ts uint64,
 	payload []Tx,
 ) Block {
 	return Block{
-		Header: BlockHeader{Parent: prevHash, Time: ts, Number: num},
-		TXs:    payload,
+		Header: BlockHeader{
+			Parent: prevHash,
+			Time:   ts,
+			Number: num,
+			Nonce:  nonce,
+		},
+		TXs: payload,
 	}
 }
 
@@ -50,6 +66,7 @@ type BlockHeader struct {
 	Parent Hash   `json:"parent"`
 	Time   uint64 `json:"time"`
 	Number uint64 `json:"number"`
+	Nonce  uint64 `json:"nonce"`
 }
 
 type BlockFS struct {
