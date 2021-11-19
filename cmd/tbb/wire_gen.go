@@ -20,12 +20,13 @@ func newNode(ctx context.Context, stateConfig *database.StateConfig, peers []pee
 	if err != nil {
 		return nil, err
 	}
-	peerState := node.NewPeerState(peers, advertisingInfo, state)
+	miner := node.NewMiner(state, advertisingInfo)
+	peerState := node.NewPeerState(peers, advertisingInfo, state, miner)
 	balanceHandler := node.NewBalanceHandler(state)
-	txHandler := node.NewTxHandler(state)
-	stateHandler := node.NewStateHandler(state, peers)
+	txHandler := node.NewTxHandler(state, miner, peerState)
+	stateHandler := node.NewStateHandler(state, miner, peers)
 	syncHandler := node.NewSyncHandler(state)
 	peerHandler := node.NewPeerHandler(peerState)
-	nodeNode := node.NewNode(state, peerState, balanceHandler, txHandler, stateHandler, syncHandler, peerHandler)
+	nodeNode := node.NewNode(state, peerState, miner, balanceHandler, txHandler, stateHandler, syncHandler, peerHandler)
 	return nodeNode, nil
 }

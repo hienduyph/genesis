@@ -64,7 +64,7 @@ func NewState(c *StateConfig) (*State, error) {
 		if err := json.Unmarshal(b, &block); err != nil {
 			return nil, fmt.Errorf("invalid row txlog: %w", err)
 		}
-		if err := applyTXs(block.Value.TXs, state); err != nil {
+		if err := applyBlock(block.Value, state); err != nil {
 			return nil, fmt.Errorf("apply tx failed: %w", err)
 		}
 		state.latestBlockHash = block.Key
@@ -167,10 +167,6 @@ func (s *State) GetBlockAfter(ctx context.Context, hash Hash) ([]Block, error) {
 }
 
 func (s *State) apply(tx Tx) error {
-	if tx.IsReward() {
-		s.Balances[tx.To] += tx.Value
-		return nil
-	}
 	if tx.Value > s.Balances[tx.From] {
 		return ErrInsufficientBalance
 	}
@@ -210,7 +206,13 @@ func applyBlock(b Block, s *State) error {
 	if !IsBlockHashValid(hash) {
 		return fmt.Errorf("invalid block hash:`%x`; %w,", hash, errorx.ErrBadInput)
 	}
-	return applyTXs(b.TXs, s)
+	if err := applyTXs(b.TXs, s); err != nil {
+		return fmt.Errorf("apply txs failed: %w", err)
+	}
+
+	// reward for miner
+	s.Balances[b.Header.Miner] += BlockReward
+	return nil
 }
 
 func applyTXs(txs []Tx, s *State) error {
@@ -224,10 +226,6 @@ func applyTXs(txs []Tx, s *State) error {
 
 func applyTx(tx Tx, s *State) error {
 	logger.Debug("applyTx", "tx", tx, "balances", s.Balances)
-	if tx.IsReward() {
-		s.Balances[tx.To] += tx.Value
-		return nil
-	}
 	if tx.Value > s.Balances[tx.From] {
 		return fmt.Errorf("wrong TX. Sender '%s' balance is %d TBB. Tx cost is %d TBB", tx.From, s.Balances[tx.From], tx.Value)
 	}

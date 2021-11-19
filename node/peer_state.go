@@ -15,6 +15,7 @@ func NewPeerState(
 	bootstraps []peer.PeerNode,
 	advertisingInfo peer.PeerNode,
 	db *database.State,
+	miner *Miner,
 ) *PeerState {
 	peers := make(map[string]peer.PeerNode)
 	for _, p := range bootstraps {
@@ -22,58 +23,63 @@ func NewPeerState(
 	}
 	return &PeerState{
 		knownPeers: peers,
-		ip:         advertisingInfo.IP,
-		port:       advertisingInfo.Port,
+		current:    advertisingInfo,
 		db:         db,
+		miner:      miner,
 	}
 }
 
 type PeerState struct {
 	knownPeers map[string]peer.PeerNode
-	ip         string
-	port       uint64
+	current    peer.PeerNode
 	db         *database.State
+	miner      *Miner
 }
 
-func (p *PeerState) AddPeer(pe peer.PeerNode) {
-	p.knownPeers[pe.TcpAddress()] = pe
-}
-func (p *PeerState) RemovePeer(pe peer.PeerNode) {
-	delete(p.knownPeers, pe.TcpAddress())
+func (ps *PeerState) Current() peer.PeerNode {
+	return ps.current
 }
 
-func (p *PeerState) IsKnownPeer(pe peer.PeerNode) bool {
-	if pe.IP == p.ip && pe.Port == p.port {
+func (ps *PeerState) AddPeer(pe peer.PeerNode) {
+	logger.Debug("add new peer", "peer", pe)
+	ps.knownPeers[pe.TcpAddress()] = pe
+}
+func (ps *PeerState) RemovePeer(pe peer.PeerNode) {
+	delete(ps.knownPeers, pe.TcpAddress())
+}
+
+func (ps *PeerState) IsKnownPeer(pe peer.PeerNode) bool {
+	if pe.IP == ps.current.IP && pe.Port == ps.current.Port {
 		return true
 	}
-	_, isKnowMembers := p.knownPeers[pe.TcpAddress()]
+	_, isKnowMembers := ps.knownPeers[pe.TcpAddress()]
 	return isKnowMembers
 }
 
-func (n *PeerState) doSync() {
+func (ps *PeerState) doSync() {
 	logger.Debug("Polling for new peers and status")
-	for _, p := range n.knownPeers {
-		if n.ip == p.IP && n.port == p.Port {
+	for _, p := range ps.knownPeers {
+		if ps.current.IP == p.IP && ps.current.Port == p.Port {
 			continue
 		}
 
 		status, e := queryPeerStatus(p)
 		if e != nil {
 			logger.Error(e, "fetch failed", "peer", p)
-			n.RemovePeer(p)
+			ps.RemovePeer(p)
 			continue
 		}
 
-		if err := n.joinKnownPeers(p); err != nil {
+		if err := ps.joinKnownPeers(p); err != nil {
 			logger.Error(err, "join knownPeers failed", "peer", p, "status", status)
 			continue
 		}
-		if err := n.syncBlocks(p, status); err != nil {
+		if err := ps.syncBlocks(p, status); err != nil {
 			logger.Error(err, "syncBlocks failed", "peer", p, "status", status)
 			continue
 		}
 
-		if err := n.syncKnownPeers(p, status); err != nil {
+		if err := ps.syncKnownPeers(p, status); err != nil {
 			logger.Error(err, "sync knownPeers failed", "peer", p, "status", status)
 			continue
 		}
@@ -85,10 +91,15 @@ func (ps *PeerState) joinKnownPeers(pe peer.PeerNode) error {
 		logger.Debug("peer connected, early return", "pe", pe)
 		return nil
 	}
+	uri := AddPeerReq{
+		IP:    ps.Current().IP,
+		Port:  ps.current.Port,
+		Miner: ps.Current().Account,
+	}.AsReqURI(endpointAddPeer)
 	url := fmt.Sprintf(
 		"http://%s%s",
 		pe.TcpAddress(),
-		AddPeerReq{IP: pe.IP, Port: pe.Port}.AsReqURI(endpointAddPeer),
+		uri,
 	)
 	res, err := http.Get(url)
 	if err != nil {
@@ -129,8 +140,11 @@ func (ps *PeerState) syncBlocks(pe peer.PeerNode, ss *StatusResp) error {
 	if err != nil {
 		return fmt.Errorf("fetch blocks from peer failed: %w", err)
 	}
-	if err := ps.db.AddBlocks(blocks); err != nil {
-		return fmt.Errorf("apply block to local failed: %w", err)
+	for _, block := range blocks {
+		if _, err := ps.db.AddBlock(block); err != nil {
+			return fmt.Errorf("addblock to local failed: %w", err)
+		}
+		ps.miner.newSyncedBlocks <- block
 	}
 	return nil
 }
@@ -140,6 +154,15 @@ func (ps *PeerState) syncKnownPeers(pe peer.PeerNode, ss *StatusResp) error {
 		if !ps.IsKnownPeer(maybeNewPeer) {
 			logger.Debug("Found new peer", "peer", maybeNewPeer.TcpAddress())
 			ps.AddPeer(maybeNewPeer)
+		}
+	}
+	return nil
+}
+
+func (ps *PeerState) syncPendingTXs(p peer.PeerNode, txs []database.Tx) error {
+	for _, tx := range txs {
+		if err := ps.miner.AddPendingTX(tx, p); err != nil {
+			return fmt.Errorf("add pending tx failed: %w", err)
 		}
 	}
 	return nil

@@ -29,10 +29,11 @@ func runCmd() *cobra.Command {
 			ctx, done := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 			defer done()
 
+			miner, _ := cmd.Flags().GetString(flagMiner)
 			raws, _ := cmd.Flags().GetStringSlice(bootstrapFlags)
-
 			dataDir, _ := cmd.Flags().GetString(flagDataDir)
 			bootstrap := make([]peer.PeerNode, 0, len(raws))
+
 			for _, item := range raws {
 				p, err := hostPortToPeer(item)
 				logger.FatalIf(err, "parse bootrap node error", "item", item)
@@ -49,6 +50,7 @@ func runCmd() *cobra.Command {
 			}
 			nodeInfo, err := hostPortToPeer(currNodeAddr)
 			logger.FatalIf(err, "parse bootrap node error", "item", currNodeAddr)
+			nodeInfo.Account = database.NewAccount(miner)
 
 			logger.Info("advertising info", "node", nodeInfo)
 
@@ -63,6 +65,7 @@ func runCmd() *cobra.Command {
 		},
 	}
 	addDefaultRequiredFlags(cmd)
+	addMinerFlag(cmd)
 	cmd.Flags().StringSlice(bootstrapFlags, nil, "list of bootrap nodes")
 	cmd.Flags().String(advertisingInfoFlags, "", "host:port for the advertising nodes, default is current ip and port of system")
 	return cmd

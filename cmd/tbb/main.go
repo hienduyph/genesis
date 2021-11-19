@@ -8,14 +8,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	flagFrom    = "from"
-	flagTo      = "to"
-	flagValue   = "value"
-	flagData    = "data"
-	flagDataDir = "datadir"
-)
-
 func main() {
 	ctx, done := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer done()

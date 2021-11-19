@@ -8,6 +8,8 @@ import (
 	"fmt"
 )
 
+const BlockReward = 100
+
 var emptyHash = Hash{}
 
 type Hash [32]byte
@@ -44,6 +46,7 @@ func NewBlock(
 	num uint64,
 	nonce uint64,
 	ts uint64,
+	miner Account,
 	payload []Tx,
 ) Block {
 	return Block{
@@ -52,6 +55,7 @@ func NewBlock(
 			Time:   ts,
 			Number: num,
 			Nonce:  nonce,
+			Miner:  miner,
 		},
 		TXs: payload,
 	}
@@ -63,10 +67,11 @@ type Block struct {
 }
 
 type BlockHeader struct {
-	Parent Hash   `json:"parent"`
-	Time   uint64 `json:"time"`
-	Number uint64 `json:"number"`
-	Nonce  uint64 `json:"nonce"`
+	Parent Hash    `json:"parent"`
+	Time   uint64  `json:"time"`
+	Number uint64  `json:"number"`
+	Nonce  uint64  `json:"nonce"`
+	Miner  Account `json:"miner"`
 }
 
 type BlockFS struct {

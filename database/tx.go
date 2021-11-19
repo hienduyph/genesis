@@ -20,10 +20,6 @@ type Tx struct {
 	Time  uint64  `json:"time"`
 }
 
-func (t Tx) IsReward() bool {
-	return t.Data == TxReward
-}
-
 func (t Tx) Hash() (Hash, error) {
 	j, e := jsonx.Marshal(t)
 	if e != nil {

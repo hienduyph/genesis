@@ -15,4 +15,5 @@ var GraphSet = wire.NewSet(
 	NewSyncHandler,
 	NewPeerState,
 	NewPeerHandler,
+	NewMiner,
 )

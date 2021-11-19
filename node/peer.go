@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/hienduyph/genesis/database"
 	"github.com/hienduyph/genesis/node/peer"
 	"github.com/hienduyph/genesis/utils/coders"
 	"github.com/hienduyph/goss/errorx"
@@ -27,8 +28,9 @@ type PeerHandler struct {
 var successResp = map[string]interface{}{"success": true}
 
 type AddPeerReq struct {
-	IP   string `json:"ip"`
-	Port uint64 `json:"port"`
+	IP    string           `json:"ip"`
+	Port  uint64           `json:"port"`
+	Miner database.Account `json:"miner"`
 }
 
 func (r AddPeerReq) AsReqURI(endpoint string) string {
@@ -49,6 +51,7 @@ func (s *PeerHandler) Add(r *http.Request) (interface{}, error) {
 		IP:       req.IP,
 		Port:     req.Port,
 		IsActive: true,
+		Account:  req.Miner,
 	}
 	s.peerState.AddPeer(p)
 	return successResp, nil

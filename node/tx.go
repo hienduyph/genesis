@@ -3,21 +3,28 @@ package node
 import (
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/hienduyph/genesis/database"
 	"github.com/hienduyph/goss/errorx"
 	"github.com/hienduyph/goss/jsonx"
 )
 
-func NewTxHandler(db *database.State) *TxHandler {
+func NewTxHandler(
+	db *database.State,
+	miner *Miner,
+	peers *PeerState,
+) *TxHandler {
 	return &TxHandler{
-		db: db,
+		db:    db,
+		miner: miner,
+		peers: peers,
 	}
 }
 
 type TxHandler struct {
-	db *database.State
+	db    *database.State
+	miner *Miner
+	peers *PeerState
 }
 
 type TxAddReq struct {
@@ -28,7 +35,6 @@ type TxAddReq struct {
 }
 
 type TxAddResp struct {
-	Hash database.Hash `json:"block_hash"`
 }
 
 func (tx *TxHandler) Add(r *http.Request) (interface{}, error) {
@@ -43,15 +49,8 @@ func (tx *TxHandler) Add(r *http.Request) (interface{}, error) {
 		in.Value,
 		in.Data,
 	)
-	block := database.NewBlock(
-		tx.db.LatestBlockHash(),
-		tx.db.NextBlockNumber(),
-		uint64(time.Now().Unix()),
-		[]database.Tx{t},
-	)
-	hash, e := tx.db.AddBlock(block)
-	if e != nil {
-		return nil, fmt.Errorf("add tx failed: %w", e)
+	if err := tx.miner.AddPendingTX(t, tx.peers.Current()); err != nil {
+		return nil, fmt.Errorf("add pending failed: %w", err)
 	}
-	return &TxAddResp{Hash: hash}, nil
+	return &TxAddResp{}, nil
 }

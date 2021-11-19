@@ -24,6 +24,7 @@ const (
 func NewNode(
 	db *database.State,
 	peerState *PeerState,
+	miner *Miner,
 
 	balancesHandler *BalanceHandler,
 	txHandler *TxHandler,
@@ -46,6 +47,7 @@ func NewNode(
 	return &Node{
 		server:    server,
 		db:        db,
+		miner:     miner,
 		peerState: peerState,
 	}
 }
@@ -55,6 +57,7 @@ type Node struct {
 
 	db        *database.State
 	peerState *PeerState
+	miner     *Miner
 }
 
 func (n *Node) Start(parentCtx context.Context) error {
@@ -64,6 +67,9 @@ func (n *Node) Start(parentCtx context.Context) error {
 	})
 	eg.Go(func() error {
 		return n.sync(ctx)
+	})
+	eg.Go(func() error {
+		return n.miner.Mine(ctx)
 	})
 	return eg.Wait()
 }
