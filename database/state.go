@@ -86,6 +86,10 @@ type State struct {
 	hasBlock        bool
 }
 
+func (s *State) DataDir() string {
+	return s.conf.DataDir
+}
+
 func (s *State) LatestBlockHash() Hash {
 	return s.latestBlockHash
 }
@@ -168,7 +172,7 @@ func (s *State) GetBlockAfter(ctx context.Context, hash Hash) ([]Block, error) {
 	return blocks, nil
 }
 
-func (s *State) apply(tx Tx) error {
+func (s *State) apply(tx SignedTx) error {
 	if tx.Value > s.Balances[tx.From] {
 		return ErrInsufficientBalance
 	}
@@ -218,7 +222,7 @@ func applyBlock(b Block, s *State) error {
 	return nil
 }
 
-func applyTXs(txs []Tx, s *State) error {
+func applyTXs(txs []SignedTx, s *State) error {
 	for _, tx := range txs {
 		if err := applyTx(tx, s); err != nil {
 			return err
@@ -227,10 +231,17 @@ func applyTXs(txs []Tx, s *State) error {
 	return nil
 }
 
-func applyTx(tx Tx, s *State) error {
+func applyTx(tx SignedTx, s *State) error {
 	logger.Debug("applyTx", "tx", tx, "balances", s.Balances)
+	ok, err := tx.IsAuthentic()
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return fmt.Errorf("wrong tx sender `%s`: %w", tx.From.String(), errorx.ErrBadInput)
+	}
 	if tx.Value > s.Balances[tx.From] {
-		return fmt.Errorf("wrong TX. Sender '%s' balance is %d TBB. Tx cost is %d TBB", tx.From, s.Balances[tx.From], tx.Value)
+		return fmt.Errorf("wrong TX. Sender '%s' balance is %d TBB. Tx cost is %d TBB", tx.From.String(), s.Balances[tx.From], tx.Value)
 	}
 	s.Balances[tx.From] -= tx.Value
 	s.Balances[tx.To] += tx.Value

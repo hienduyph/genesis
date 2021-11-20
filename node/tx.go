@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/hienduyph/genesis/database"
+	"github.com/hienduyph/genesis/wallet"
 	"github.com/hienduyph/goss/errorx"
 	"github.com/hienduyph/goss/jsonx"
 )
@@ -28,28 +30,39 @@ type TxHandler struct {
 }
 
 type TxAddReq struct {
-	From  string `json:"from"`
-	To    string `json:"to"`
-	Value uint   `json:"value"`
-	Data  string `json:"data"`
+	From    string `json:"from"`
+	FromPwd string `json:"from_pwd"`
+	To      string `json:"to"`
+	Value   uint   `json:"value"`
+	Data    string `json:"data"`
 }
 
 type TxAddResp struct {
 }
 
-func (tx *TxHandler) Add(r *http.Request) (interface{}, error) {
+func (txh *TxHandler) Add(r *http.Request) (interface{}, error) {
 	in := new(TxAddReq)
 	if e := jsonx.NewDecoder(r.Body).Decode(in); e != nil {
 		return nil, fmt.Errorf("decode body failed: `%s` %w", e.Error(), errorx.ErrBadInput)
 	}
-
-	t := database.NewTx(
-		database.NewAccount(in.From),
+	from := database.NewAccount(in.From)
+	if from.String() == common.HexToAddress("").String() {
+		return nil, fmt.Errorf("invalid from: %w", errorx.ErrBadInput)
+	}
+	if in.FromPwd == "" {
+		return nil, fmt.Errorf("missing password: %w", errorx.ErrBadInput)
+	}
+	tx := database.NewTx(
+		from,
 		database.NewAccount(in.To),
 		in.Value,
 		in.Data,
 	)
-	if err := tx.miner.AddPendingTX(t, tx.peers.Current()); err != nil {
+	signedtx, err := wallet.SignTxWithKeystoreAccount(tx, from, in.FromPwd, wallet.GetKeystoreDirPath(txh.db.DataDir()))
+	if err != nil {
+		return nil, err
+	}
+	if err := txh.miner.AddPendingTX(signedtx, txh.peers.Current()); err != nil {
 		return nil, fmt.Errorf("add pending failed: %w", err)
 	}
 	return &TxAddResp{}, nil

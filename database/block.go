@@ -48,7 +48,7 @@ func NewBlock(
 	nonce uint32,
 	ts uint64,
 	miner Account,
-	payload []Tx,
+	payload []SignedTx,
 ) Block {
 	// sorting to make the ordering consistent
 	sort.Slice(payload, func(i, j int) bool {
@@ -68,7 +68,7 @@ func NewBlock(
 
 type Block struct {
 	Header BlockHeader `json:"header"`
-	TXs    []Tx        `json:"payload"`
+	TXs    []SignedTx        `json:"payload"`
 }
 
 type BlockHeader struct {

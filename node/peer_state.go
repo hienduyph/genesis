@@ -182,7 +182,7 @@ func (ps *PeerState) syncKnownPeers(pe peer.PeerNode, ss *StatusResp) error {
 	return nil
 }
 
-func (ps *PeerState) syncPendingTXs(p peer.PeerNode, txs []database.Tx) error {
+func (ps *PeerState) syncPendingTXs(p peer.PeerNode, txs []database.SignedTx) error {
 	for _, tx := range txs {
 		if err := ps.miner.AddPendingTX(tx, p); err != nil {
 			return fmt.Errorf("add pending tx failed: %w", err)

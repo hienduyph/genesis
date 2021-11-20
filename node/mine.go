@@ -18,7 +18,7 @@ func NewPendingBlock(
 	parent database.Hash,
 	number uint64,
 	miner database.Account,
-	txs []database.Tx,
+	txs []database.SignedTx,
 ) PendingBlock {
 	return PendingBlock{
 		parent: parent,
@@ -33,7 +33,7 @@ type PendingBlock struct {
 	parent database.Hash
 	number uint64
 	time   uint64
-	txs    []database.Tx
+	txs    []database.SignedTx
 	miner  database.Account
 }
 
@@ -45,10 +45,10 @@ func NewMiner(
 		db:          db,
 		currentNode: advertisingInfo,
 
-		pendingTxs:      make(map[string]database.Tx, 1000),
-		archivedTXs:     make(map[string]database.Tx, 1000),
+		pendingTxs:      make(map[string]database.SignedTx, 1000),
+		archivedTXs:     make(map[string]database.SignedTx, 1000),
 		newSyncedBlocks: make(chan database.Block, 10),
-		newPendingTXs:   make(chan database.Tx, 10000),
+		newPendingTXs:   make(chan database.SignedTx, 10000),
 		isMining:        false,
 	}
 
@@ -58,14 +58,14 @@ type Miner struct {
 	db          *database.State
 	currentNode peer.PeerNode
 
-	pendingTxs      map[string]database.Tx
-	archivedTXs     map[string]database.Tx
+	pendingTxs      map[string]database.SignedTx
+	archivedTXs     map[string]database.SignedTx
 	newSyncedBlocks chan database.Block
-	newPendingTXs   chan database.Tx
+	newPendingTXs   chan database.SignedTx
 	isMining        bool
 }
 
-func (m *Miner) AddPendingTX(tx database.Tx, node peer.PeerNode) error {
+func (m *Miner) AddPendingTX(tx database.SignedTx, node peer.PeerNode) error {
 	txHash, err := tx.Hash()
 	if err != nil {
 		return fmt.Errorf("hash failed: %w", err)
@@ -160,8 +160,8 @@ func (m *Miner) MinePendingTXs(ctx context.Context) error {
 	return nil
 }
 
-func (m *Miner) getPendingTXsAsArray() []database.Tx {
-	txs := make([]database.Tx, 0, len(m.pendingTxs))
+func (m *Miner) getPendingTXsAsArray() []database.SignedTx {
+	txs := make([]database.SignedTx, 0, len(m.pendingTxs))
 	for _, tx := range m.pendingTxs {
 		txs = append(txs, tx)
 	}

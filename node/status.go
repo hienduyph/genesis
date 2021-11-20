@@ -33,7 +33,7 @@ type StatusResp struct {
 	Hash       database.Hash   `json:"block_hash"`
 	Number     uint64          `json:"block_number"`
 	KnownPeers []peer.PeerNode `json:"known_peers"`
-	PendingTXs []database.Tx   `json:"pending_txs"`
+	PendingTXs []database.SignedTx   `json:"pending_txs"`
 }
 
 func (s *StateHandler) Status(r *http.Request) (interface{}, error) {
