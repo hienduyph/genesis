@@ -1,6 +1,7 @@
 package node
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
 
@@ -38,6 +39,7 @@ type TxAddReq struct {
 }
 
 type TxAddResp struct {
+	Signed string
 }
 
 func (txh *TxHandler) Add(r *http.Request) (interface{}, error) {
@@ -56,6 +58,7 @@ func (txh *TxHandler) Add(r *http.Request) (interface{}, error) {
 		from,
 		database.NewAccount(in.To),
 		in.Value,
+		txh.db.GetNextAccountNonce(from),
 		in.Data,
 	)
 	signedtx, err := wallet.SignTxWithKeystoreAccount(tx, from, in.FromPwd, wallet.GetKeystoreDirPath(txh.db.DataDir()))
@@ -65,5 +68,5 @@ func (txh *TxHandler) Add(r *http.Request) (interface{}, error) {
 	if err := txh.miner.AddPendingTX(signedtx, txh.peers.Current()); err != nil {
 		return nil, fmt.Errorf("add pending failed: %w", err)
 	}
-	return &TxAddResp{}, nil
+	return &TxAddResp{Signed: base64.StdEncoding.EncodeToString(signedtx.Sig)}, nil
 }

@@ -35,6 +35,15 @@ func balancesCmd() *cobra.Command {
 			for acc, balance := range state.Balances {
 				fmt.Println(fmt.Sprintf("%s: %d", acc.String(), balance))
 			}
+
+			fmt.Println("")
+			fmt.Println("++++++++++++++++++++++++++")
+			fmt.Printf("Accounts nonce at %x:\n", state.LatestBlockHash())
+			fmt.Println("___________________")
+			fmt.Println("")
+			for acc, n := range state.AccountNonces {
+				fmt.Println(fmt.Sprintf("%s: %d", acc.String(), n))
+			}
 		},
 	}
 	addDefaultRequiredFlags(list)

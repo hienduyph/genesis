@@ -77,8 +77,6 @@ func (m *Miner) AddPendingTX(tx database.SignedTx, node peer.PeerNode) error {
 		logger.Debug("Added TX to mempool", "tx", tx, "peer", node.TcpAddress())
 		m.pendingTxs[hex] = tx
 		m.newPendingTXs <- tx
-	} else {
-		logger.Info("tx already in our sys", "tx", tx, "peer", node.TcpAddress())
 	}
 	return nil
 }

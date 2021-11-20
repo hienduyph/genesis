@@ -110,7 +110,6 @@ func (ps *PeerState) doSync() {
 
 func (ps *PeerState) joinKnownPeers(pe peer.PeerNode) error {
 	if pe.Connected {
-		logger.Debug("peer connected, early return", "pe", pe)
 		return nil
 	}
 	body := AddPeerReq{
@@ -160,6 +159,9 @@ func (ps *PeerState) syncBlocks(pe peer.PeerNode, ss *StatusResp) error {
 	if localBlockNumber == 0 && ss.Number == 0 {
 		newBlocksCount = 1
 	}
+	if newBlocksCount == 0 {
+		return nil
+	}
 	log.Info("founds new blocks from peer", "num", newBlocksCount, "peer", pe.TcpAddress())
 
 	blocks, err := fetchBlocksFromPeer(pe, ps.db.LatestBlockHash())
@@ -192,9 +194,7 @@ func (ps *PeerState) syncPendingTXs(p peer.PeerNode, txs []database.SignedTx) er
 }
 
 func queryPeerStatus(peer peer.PeerNode) (*StatusResp, error) {
-	log := logger.Factory("queryPeerStatus")
 	url := fmt.Sprintf("http://%s%s", peer.TcpAddress(), endpointStatus)
-	log.Info("query peer status", "url", url)
 	res, e := http.Get(url)
 	if e != nil {
 		return nil, fmt.Errorf("fetch failed: %w", e)
@@ -205,9 +205,7 @@ func queryPeerStatus(peer peer.PeerNode) (*StatusResp, error) {
 }
 
 func fetchBlocksFromPeer(pe peer.PeerNode, fromBlock database.Hash) ([]database.Block, error) {
-	log := logger.Factory("fetchBlocksFromPeer")
 	url := fmt.Sprintf("http://%s%s", pe.TcpAddress(), FromBlockReq{fromBlock.Hex()}.AsReqURI(endpointSync))
-	log.Info("Importing blocks", "peer", pe.TcpAddress(), "url", url)
 	res, err := http.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("fetch from blocks failed: %w", err)

@@ -9,6 +9,7 @@ import (
 	"os"
 	"reflect"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/hienduyph/goss/errorx"
 	"github.com/hienduyph/goss/jsonx"
 	"github.com/hienduyph/goss/logger"
@@ -41,6 +42,7 @@ func NewState(c *StateConfig) (*State, error) {
 	scaner := bufio.NewScanner(f)
 	state := &State{
 		Balances:        make(map[Account]uint, 1000),
+		AccountNonces:   make(map[Account]uint64, 1000),
 		dbFile:          f,
 		latestBlockHash: Hash{},
 		latestBlock:     Block{},
@@ -78,7 +80,8 @@ func NewState(c *StateConfig) (*State, error) {
 }
 
 type State struct {
-	Balances        map[Account]uint `json:"balances"`
+	Balances        map[Account]uint   `json:"balances"`
+	AccountNonces   map[Account]uint64 `json:"account_nonces"`
 	dbFile          *os.File
 	latestBlockHash Hash
 	latestBlock     Block
@@ -139,6 +142,7 @@ func (s *State) AddBlock(block Block) (Hash, error) {
 	}
 
 	s.Balances = pendingState.Balances
+	s.AccountNonces = pendingState.AccountNonces
 	s.latestBlockHash = blockHash
 	s.latestBlock = block
 	s.hasBlock = true
@@ -187,11 +191,19 @@ func (s *State) copy() *State {
 		hasBlock:        s.hasBlock,
 		latestBlockHash: s.latestBlockHash,
 		Balances:        make(map[Account]uint, len(s.Balances)),
+		AccountNonces:   make(map[common.Address]uint64, len(s.AccountNonces)),
 	}
 	for k, v := range s.Balances {
 		c.Balances[k] = v
 	}
+	for k, v := range s.AccountNonces {
+		c.AccountNonces[k] = v
+	}
 	return c
+}
+
+func (s *State) GetNextAccountNonce(acc Account) uint64 {
+	return s.AccountNonces[acc] + 1
 }
 
 func applyBlock(b Block, s *State) error {
@@ -217,8 +229,9 @@ func applyBlock(b Block, s *State) error {
 		return fmt.Errorf("apply txs failed: %w", err)
 	}
 
-	// reward for miner
+	// incentive for miner
 	s.Balances[b.Header.Miner] += BlockReward
+	s.Balances[b.Header.Miner] += uint(len(b.TXs)) * TxFee
 	return nil
 }
 
@@ -240,10 +253,24 @@ func applyTx(tx SignedTx, s *State) error {
 	if !ok {
 		return fmt.Errorf("wrong tx sender `%s`: %w", tx.From.String(), errorx.ErrBadInput)
 	}
-	if tx.Value > s.Balances[tx.From] {
+
+	expectedNonce := s.GetNextAccountNonce(tx.From)
+	if expectedNonce != tx.Nonce {
+		return fmt.Errorf(
+			"wrong tx nonce: %w. Sender `%s` next none is `%d` not `%d`",
+			errorx.ErrBadInput,
+			tx.From.String(),
+			expectedNonce,
+			tx.Nonce,
+		)
+	}
+
+	txCost := tx.Value + TxFee
+	if txCost > s.Balances[tx.From] {
 		return fmt.Errorf("wrong TX. Sender '%s' balance is %d TBB. Tx cost is %d TBB", tx.From.String(), s.Balances[tx.From], tx.Value)
 	}
-	s.Balances[tx.From] -= tx.Value
+	s.Balances[tx.From] -= txCost
 	s.Balances[tx.To] += tx.Value
+	s.AccountNonces[tx.From] = tx.Nonce
 	return nil
 }

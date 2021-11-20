@@ -11,8 +11,11 @@ import (
 	"github.com/hienduyph/goss/jsonx"
 )
 
-func NewTx(from Account, to Account, value uint, msg string) Tx {
-	return Tx{from, to, value, msg, uint64(time.Now().UnixMicro())}
+// each tx cost 50 tokens
+const TxFee = uint(50)
+
+func NewTx(from Account, to Account, value uint, nonce uint64, msg string) Tx {
+	return Tx{from, to, value, msg, uint64(time.Now().UnixMicro()), nonce}
 }
 
 type Tx struct {
@@ -21,6 +24,7 @@ type Tx struct {
 	Value uint    `json:"value"`
 	Data  string  `json:"data"`
 	Time  uint64  `json:"time"`
+	Nonce uint64  `json:"nonce"`
 }
 
 func (t Tx) Hash() (Hash, error) {
