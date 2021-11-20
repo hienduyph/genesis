@@ -40,14 +40,26 @@ func (ps *PeerState) Current() peer.PeerNode {
 	return ps.current
 }
 
+// AddPeer adds if not exists
 func (ps *PeerState) AddPeer(pe peer.PeerNode) {
-	logger.Debug("add new peer", "peer", pe)
-	ps.knownPeers[pe.TcpAddress()] = pe
+	if !ps.IsKnownPeer(pe) {
+		key := pe.TcpAddress()
+		logger.Debug("Found new peer", "peer", key)
+		ps.knownPeers[key] = pe
+	}
 }
+
 func (ps *PeerState) RemovePeer(pe peer.PeerNode) {
 	delete(ps.knownPeers, pe.TcpAddress())
 }
 
+func (ps *PeerState) KnownPeers() []peer.PeerNode {
+	out := make([]peer.PeerNode, 0, len(ps.knownPeers))
+	for _, item := range ps.knownPeers {
+		out = append(out, item)
+	}
+	return out
+}
 func (ps *PeerState) IsKnownPeer(pe peer.PeerNode) bool {
 	if pe.IP == ps.current.IP && pe.Port == ps.current.Port {
 		return true
@@ -57,8 +69,9 @@ func (ps *PeerState) IsKnownPeer(pe peer.PeerNode) bool {
 }
 
 func (ps *PeerState) doSync() {
-	logger.Debug("Polling for new peers and status")
-	for _, p := range ps.knownPeers {
+	peers := ps.KnownPeers()
+	logger.Debug("Polling for new peers and status", "peers", peers)
+	for _, p := range peers {
 		if ps.current.IP == p.IP && ps.current.Port == p.Port {
 			continue
 		}
@@ -71,16 +84,21 @@ func (ps *PeerState) doSync() {
 		}
 
 		if err := ps.joinKnownPeers(p); err != nil {
-			logger.Error(err, "join knownPeers failed", "peer", p, "status", status)
+			logger.Error(err, "join knownPeers failed", "peer", p)
 			continue
 		}
 		if err := ps.syncBlocks(p, status); err != nil {
-			logger.Error(err, "syncBlocks failed", "peer", p, "status", status)
+			logger.Error(err, "syncBlocks failed", "peer", p, "txs", len(status.PendingTXs), "nums", status.Number)
 			continue
 		}
 
 		if err := ps.syncKnownPeers(p, status); err != nil {
-			logger.Error(err, "sync knownPeers failed", "peer", p, "status", status)
+			logger.Error(err, "sync knownPeers failed", "peer", p, "status", status.KnownPeers)
+			continue
+		}
+
+		if err := ps.syncPendingTXs(p, status.PendingTXs); err != nil {
+			logger.Error(err, "sync pending tx failed", "total", len(status.PendingTXs), "details", status.PendingTXs)
 			continue
 		}
 	}
@@ -93,7 +111,7 @@ func (ps *PeerState) joinKnownPeers(pe peer.PeerNode) error {
 	}
 	uri := AddPeerReq{
 		IP:    ps.Current().IP,
-		Port:  ps.current.Port,
+		Port:  ps.Current().Port,
 		Miner: ps.Current().Account,
 	}.AsReqURI(endpointAddPeer)
 	url := fmt.Sprintf(
@@ -109,7 +127,7 @@ func (ps *PeerState) joinKnownPeers(pe peer.PeerNode) error {
 	defer res.Body.Close()
 	knownPeer := ps.knownPeers[pe.TcpAddress()]
 	knownPeer.Connected = true
-	ps.AddPeer(knownPeer)
+	ps.knownPeers[pe.TcpAddress()] = knownPeer
 	return nil
 }
 
@@ -151,10 +169,7 @@ func (ps *PeerState) syncBlocks(pe peer.PeerNode, ss *StatusResp) error {
 
 func (ps *PeerState) syncKnownPeers(pe peer.PeerNode, ss *StatusResp) error {
 	for _, maybeNewPeer := range ss.KnownPeers {
-		if !ps.IsKnownPeer(maybeNewPeer) {
-			logger.Debug("Found new peer", "peer", maybeNewPeer.TcpAddress())
-			ps.AddPeer(maybeNewPeer)
-		}
+		ps.AddPeer(maybeNewPeer)
 	}
 	return nil
 }

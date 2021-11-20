@@ -11,11 +11,13 @@ services:
       - --datadir=/data/.tbb
       - --advertising-address
       - genesis:8080
+      - --miner
+      - "q"
     volumes:
       - ${HOME}/.tbb:/data/.tbb
       - .:/src
 
-  node:
+  node1:
     build:
       dockerfile: ./dev.Dockerfile
     command:
@@ -27,6 +29,30 @@ services:
       - /tmp/.tbb
       - --bootstraps
       - genesis:8080
+      - --advertising-address
+      - "node1:8080"
+      - --miner
+      - "hien"
+    links:
+      - genesis
+    volumes:
+      - .:/src
+  node2:
+    build:
+      dockerfile: ./dev.Dockerfile
+    command:
+      - go
+      - run
+      - ./cmd/tbb
+      - run
+      - --datadir
+      - /tmp/.tbb
+      - --bootstraps
+      - genesis:8080
+      - --advertising-address
+      - "node2:8080"
+      - --miner
+      - "phd"
     links:
       - genesis
     volumes:

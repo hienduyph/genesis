@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"sort"
 )
 
 const BlockReward = 100
@@ -44,11 +45,15 @@ func IsBlockHashValid(hash Hash) bool {
 func NewBlock(
 	prevHash Hash,
 	num uint64,
-	nonce uint64,
+	nonce uint32,
 	ts uint64,
 	miner Account,
 	payload []Tx,
 ) Block {
+	// sorting to make the ordering consistent
+	sort.Slice(payload, func(i, j int) bool {
+		return payload[i].Time < payload[j].Time
+	})
 	return Block{
 		Header: BlockHeader{
 			Parent: prevHash,
@@ -70,7 +75,7 @@ type BlockHeader struct {
 	Parent Hash    `json:"parent"`
 	Time   uint64  `json:"time"`
 	Number uint64  `json:"number"`
-	Nonce  uint64  `json:"nonce"`
+	Nonce  uint32  `json:"nonce"`
 	Miner  Account `json:"miner"`
 }
 

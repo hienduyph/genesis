@@ -74,9 +74,11 @@ func (m *Miner) AddPendingTX(tx database.Tx, node peer.PeerNode) error {
 	_, isArchived := m.archivedTXs[hex]
 	_, isAlreadyPending := m.pendingTxs[hex]
 	if !isAlreadyPending && !isArchived {
-		logger.Debug("Added pending", "tx", tx, "peer", node.TcpAddress())
+		logger.Debug("Added TX to mempool", "tx", tx, "peer", node.TcpAddress())
 		m.pendingTxs[hex] = tx
 		m.newPendingTXs <- tx
+	} else {
+		logger.Info("tx already in our sys", "tx", tx, "peer", node.TcpAddress())
 	}
 	return nil
 }
@@ -97,6 +99,7 @@ func (m *Miner) Mine(ctx context.Context) error {
 			}
 			// stop current mining
 			if m.isMining {
+				logger.Info("Mining is in progress. Stop infavor of new block")
 				blockHas, _ := block.Hash()
 				logger.Info("peer mined faster", "block", blockHas.Hex())
 				m.removeMinedPendingTXs(block)
@@ -108,9 +111,10 @@ func (m *Miner) Mine(ctx context.Context) error {
 				if len(m.pendingTxs) == 0 || m.isMining {
 					return
 				}
+				logger.Info("Start mining with", "txs", len(m.pendingTxs))
 				m.isMining = true
 				miningCtx, stopCurrentMining = context.WithCancel(ctx)
-				err := m.minePendingTXs(miningCtx)
+				err := m.MinePendingTXs(miningCtx)
 				if err != nil {
 					logger.Error(err, "ming block failed")
 				}
@@ -136,13 +140,14 @@ func (m *Miner) removeMinedPendingTXs(block database.Block) {
 	}
 }
 
-func (m *Miner) minePendingTXs(ctx context.Context) error {
+func (m *Miner) MinePendingTXs(ctx context.Context) error {
 	blockToMine := NewPendingBlock(
 		m.db.LatestBlockHash(),
 		m.db.NextBlockNumber(),
 		m.currentNode.Account,
 		m.getPendingTXsAsArray(),
 	)
+	logger.Info("Start to mining", "acc", m.currentNode.Account, "latest", m.db.LatestBlockHash())
 	minedBlock, err := Mine(ctx, blockToMine)
 	if err != nil {
 		return fmt.Errorf("mined block failed: %w", err)
@@ -172,12 +177,12 @@ func Mine(ctx context.Context, pb PendingBlock) (database.Block, error) {
 	attempt := 0
 	var block database.Block
 	var hash database.Hash
-	var nonce uint64
+	var nonce uint32
 	var err error
 	for !database.IsBlockHashValid(hash) {
 		select {
 		case <-ctx.Done():
-			return emptyBlock, nil
+			return emptyBlock, ctx.Err()
 		default:
 		}
 		attempt++
@@ -210,7 +215,7 @@ func Mine(ctx context.Context, pb PendingBlock) (database.Block, error) {
 	return block, nil
 }
 
-func generateNonce() uint64 {
+func generateNonce() uint32 {
 	rand.Seed(time.Now().UTC().UnixNano())
-	return rand.Uint64()
+	return rand.Uint32()
 }

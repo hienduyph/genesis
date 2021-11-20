@@ -64,8 +64,10 @@ func NewState(c *StateConfig) (*State, error) {
 		if err := json.Unmarshal(b, &block); err != nil {
 			return nil, fmt.Errorf("invalid row txlog: %w", err)
 		}
+		h, _ := block.Value.Hash()
+		logger.Info("applying block", "block", block.Value, "h", h.Hex())
 		if err := applyBlock(block.Value, state); err != nil {
-			return nil, fmt.Errorf("apply tx failed: %w", err)
+			return nil, fmt.Errorf("apply block failed: %w", err)
 		}
 		state.latestBlockHash = block.Key
 		state.latestBlock = block.Value
@@ -76,7 +78,7 @@ func NewState(c *StateConfig) (*State, error) {
 }
 
 type State struct {
-	Balances        map[Account]uint
+	Balances        map[Account]uint `json:"balances"`
 	dbFile          *os.File
 	latestBlockHash Hash
 	latestBlock     Block
@@ -112,29 +114,29 @@ func (s *State) AddBlocks(blocks []Block) error {
 	return nil
 }
 
-func (s *State) AddBlock(b Block) (Hash, error) {
-	pendingState := s.copy()
-	if err := applyBlock(b, pendingState); err != nil {
-		return emptyHash, fmt.Errorf("apply block failed: %w", err)
-	}
-	blockHash, err := b.Hash()
+func (s *State) AddBlock(block Block) (Hash, error) {
+	blockHash, err := block.Hash()
 	if err != nil {
 		return emptyHash, fmt.Errorf("gen hash failed: %w", err)
 	}
-	blockFs := BlockFS{blockHash, b}
+	pendingState := s.copy()
+	if err := applyBlock(block, pendingState); err != nil {
+		return emptyHash, fmt.Errorf("apply block failed: %w", err)
+	}
+	blockFs := BlockFS{blockHash, block}
 	blockFSJSON, err := json.Marshal(blockFs)
 	if err != nil {
 		return Hash{}, fmt.Errorf("encode blockfs failed: %w", err)
 	}
 
-	fmt.Printf("Persist new block to disk: \t %s\n", blockFSJSON)
+	logger.Debug("Persist new block to disk", "block", blockHash.Hex())
 	if _, err := s.dbFile.Write(append(blockFSJSON, '\n')); err != nil {
 		return Hash{}, fmt.Errorf("flush to disk failed: %w", err)
 	}
 
 	s.Balances = pendingState.Balances
 	s.latestBlockHash = blockHash
-	s.latestBlock = b
+	s.latestBlock = block
 	s.hasBlock = true
 	return blockHash, nil
 }
@@ -189,6 +191,15 @@ func (s *State) copy() *State {
 }
 
 func applyBlock(b Block, s *State) error {
+	// validate the hash
+	hash, err := b.Hash()
+	if err != nil {
+		return fmt.Errorf("hash failed: %w", err)
+	}
+	if !IsBlockHashValid(hash) {
+		return fmt.Errorf("invalid block hash:`%x`; %w,", hash, errorx.ErrBadInput)
+	}
+
 	nextExpectedBlockNumver := s.latestBlock.Header.Number + 1
 	if s.hasBlock && b.Header.Number != nextExpectedBlockNumver {
 		return fmt.Errorf("next expected block must `%d` not `%d`, %w", nextExpectedBlockNumver, b.Header.Number, errorx.ErrBadInput)
@@ -198,14 +209,6 @@ func applyBlock(b Block, s *State) error {
 		return fmt.Errorf("next block parent hash must be `%x` not `%x`", s.latestBlockHash, b.Header.Parent)
 	}
 
-	// validate the hash
-	hash, err := b.Hash()
-	if err != nil {
-		return fmt.Errorf("hash failed: %w", err)
-	}
-	if !IsBlockHashValid(hash) {
-		return fmt.Errorf("invalid block hash:`%x`; %w,", hash, errorx.ErrBadInput)
-	}
 	if err := applyTXs(b.TXs, s); err != nil {
 		return fmt.Errorf("apply txs failed: %w", err)
 	}

@@ -9,6 +9,7 @@ import (
 
 	"github.com/hienduyph/genesis/database"
 	"github.com/hienduyph/genesis/node"
+	"github.com/hienduyph/genesis/node/peer"
 	"github.com/hienduyph/goss/logger"
 	"github.com/spf13/cobra"
 )
@@ -33,20 +34,15 @@ var migrateCmd = func() *cobra.Command {
 
 			logger.Info("init state", "db", state)
 
-			pendingBlock := node.NewPendingBlock(
-				database.Hash{},
-				state.NextBlockNumber(),
-				database.NewAccount(miner),
-				[]database.Tx{
-					database.NewTx("q", "q", 3, ""),
-					database.NewTx("q", "babayaga", 2000, ""),
-					database.NewTx("babayaga", "q", 1, ""),
-					database.NewTx("babayaga", "caesar", 1000, ""),
-					database.NewTx("babayaga", "q", 50, ""),
-				},
-			)
+			curr := peer.PeerNode{Account: database.NewAccount(miner)}
+			m := node.NewMiner(state, curr)
+			m.AddPendingTX(database.NewTx("q", "q", 3, ""), curr)
+			m.AddPendingTX(database.NewTx("q", "babayaga", 2000, ""), curr)
+			m.AddPendingTX(database.NewTx("babayaga", "q", 1, ""), curr)
+			m.AddPendingTX(database.NewTx("babayaga", "caesar", 1000, ""), curr)
+			m.AddPendingTX(database.NewTx("babayaga", "q", 50, ""), curr)
 
-			_, err = node.Mine(ctx, pendingBlock)
+			err = m.MinePendingTXs(ctx)
 			logger.FatalIf(err, "mine failed")
 		},
 	}

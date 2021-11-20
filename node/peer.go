@@ -47,6 +47,8 @@ func (s *PeerHandler) Add(r *http.Request) (interface{}, error) {
 	if err := coders.DecodeQuery(req, r.URL.Query()); err != nil {
 		return nil, fmt.Errorf("input input: `%s`; %w", err.Error(), errorx.ErrBadInput)
 	}
+
+	logger.Debug("Receive peer req", "req", req, "addr", r.RemoteAddr)
 	p := peer.PeerNode{
 		IP:       req.IP,
 		Port:     req.Port,

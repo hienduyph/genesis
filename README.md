@@ -5,7 +5,7 @@ Jet another block chain from scratch
 ## Get Starter
 
 ```bash
-docker-compose up --scale node=3
+docker-compose up
 ```
 
 ## Development

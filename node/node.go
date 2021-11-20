@@ -15,6 +15,7 @@ import (
 )
 
 const (
+	PollInterval    = 5
 	Port            = 8080
 	endpointStatus  = "/node/status"
 	endpointSync    = "/node/sync"
@@ -76,7 +77,7 @@ func (n *Node) Start(parentCtx context.Context) error {
 
 func (n *Node) sync(ctx context.Context) error {
 	logger.Info("start the syncing daemon", "peers", n.peerState.knownPeers)
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(PollInterval * time.Second)
 	defer ticker.Stop()
 	for {
 		select {

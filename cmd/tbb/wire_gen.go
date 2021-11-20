@@ -24,7 +24,7 @@ func newNode(ctx context.Context, stateConfig *database.StateConfig, peers []pee
 	peerState := node.NewPeerState(peers, advertisingInfo, state, miner)
 	balanceHandler := node.NewBalanceHandler(state)
 	txHandler := node.NewTxHandler(state, miner, peerState)
-	stateHandler := node.NewStateHandler(state, miner, peers)
+	stateHandler := node.NewStateHandler(state, miner, peerState, peers)
 	syncHandler := node.NewSyncHandler(state)
 	peerHandler := node.NewPeerHandler(peerState)
 	nodeNode := node.NewNode(state, peerState, miner, balanceHandler, txHandler, stateHandler, syncHandler, peerHandler)

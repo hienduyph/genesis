@@ -9,7 +9,7 @@ import (
 )
 
 func NewTx(from Account, to Account, value uint, msg string) Tx {
-	return Tx{from, to, value, msg, uint64(time.Now().Unix())}
+	return Tx{from, to, value, msg, uint64(time.Now().UnixMicro())}
 }
 
 type Tx struct {
