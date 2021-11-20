@@ -11,3 +11,8 @@ func addMinerFlag(cmd *cobra.Command) {
 	cmd.Flags().String(flagMiner, "", "name for this miner")
 	cmd.MarkFlagRequired(flagMiner)
 }
+
+func getDataDirFromCmd(cmd *cobra.Command) string {
+	v, _ := cmd.Flags().GetString(flagDataDir)
+	return v
+}

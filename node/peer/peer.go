@@ -7,12 +7,17 @@ import (
 )
 
 type PeerNode struct {
-	IP          string           `json:"ip"`
-	Port        uint64           `json:"port"`
-	IsBootstrap bool             `json:"is_bootstrap"`
-	IsActive    bool             `json:"is_active"`
-	Connected   bool             `json:"connected"`
-	Account     database.Account `json:"account"`
+	// core info, must be unique
+	IP   string `json:"ip"`
+	Port uint64 `json:"port"`
+
+	// other meta could change
+	Account database.Account `json:"account"`
+
+	// state
+	IsBootstrap bool `json:"is_bootstrap"`
+	IsActive    bool `json:"is_active"`
+	Connected   bool `json:"connected"`
 }
 
 func (p PeerNode) TcpAddress() string {

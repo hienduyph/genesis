@@ -1,7 +1,9 @@
 package database
 
+import "github.com/ethereum/go-ethereum/common"
+
 func NewAccount(val string) Account {
-	return Account(val)
+	return common.HexToAddress(val)
 }
 
-type Account string
+type Account = common.Address

@@ -2,6 +2,6 @@
   "genesis_time": "2019-03-19T00:00:00.000000Z",
   "chain_id": "hello-block-chain-from-q",
   "balances": {
-    "q": 1000000
+    "0x63608270e8ae01Fae8e8a3D1Bb0615B897425C95": 1000000
   }
 }

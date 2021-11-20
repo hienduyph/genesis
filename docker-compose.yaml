@@ -12,7 +12,7 @@ services:
       - --advertising-address
       - genesis:8080
       - --miner
-      - "q"
+      - "0x63608270e8ae01Fae8e8a3D1Bb0615B897425C95"
     volumes:
       - ${HOME}/.tbb:/data/.tbb
       - .:/src
@@ -26,17 +26,18 @@ services:
       - ./cmd/tbb
       - run
       - --datadir
-      - /tmp/.tbb
+      - /data/.tbb
       - --bootstraps
       - genesis:8080
       - --advertising-address
       - "node1:8080"
       - --miner
-      - "hien"
+      - "0xE8d4a2055C830535e95fd171e65ca84Fda347Ce5"
     links:
       - genesis
     volumes:
       - .:/src
+      - .data/node1:/data/.tbb
   node2:
     build:
       dockerfile: ./dev.Dockerfile
@@ -46,14 +47,15 @@ services:
       - ./cmd/tbb
       - run
       - --datadir
-      - /tmp/.tbb
+      - /data/.tbb
       - --bootstraps
       - genesis:8080
       - --advertising-address
       - "node2:8080"
       - --miner
-      - "phd"
+      - "0x1871989a7c773976aE0B6Ef346D9db3722Affa76"
     links:
       - genesis
     volumes:
       - .:/src
+      - .data/node2:/data/.tbb

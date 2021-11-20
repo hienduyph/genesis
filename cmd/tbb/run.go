@@ -31,7 +31,7 @@ func runCmd() *cobra.Command {
 
 			miner, _ := cmd.Flags().GetString(flagMiner)
 			raws, _ := cmd.Flags().GetStringSlice(bootstrapFlags)
-			dataDir, _ := cmd.Flags().GetString(flagDataDir)
+			dataDir := getDataDirFromCmd(cmd)
 			bootstrap := make([]peer.PeerNode, 0, len(raws))
 
 			for _, item := range raws {

@@ -23,7 +23,7 @@ func balancesCmd() *cobra.Command {
 		Use:   "list",
 		Short: "Lists all balances",
 		Run: func(cmd *cobra.Command, args []string) {
-			dataDir, _ := cmd.Flags().GetString(flagDataDir)
+			dataDir := getDataDirFromCmd(cmd)
 			state, err := database.NewState(&database.StateConfig{DataDir: dataDir})
 			if err != nil {
 				panic(err)
@@ -33,7 +33,7 @@ func balancesCmd() *cobra.Command {
 			fmt.Println("___________________")
 			fmt.Println("")
 			for acc, balance := range state.Balances {
-				fmt.Println(fmt.Sprintf("%s: %d", acc, balance))
+				fmt.Println(fmt.Sprintf("%s: %d", acc.String(), balance))
 			}
 		},
 	}

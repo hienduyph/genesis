@@ -1,6 +1,7 @@
 package node
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,6 +11,8 @@ import (
 	"github.com/hienduyph/goss/jsonx"
 	"github.com/hienduyph/goss/logger"
 )
+
+const ContentTypeJSON = "application/json"
 
 func NewPeerState(
 	bootstraps []peer.PeerNode,
@@ -40,13 +43,21 @@ func (ps *PeerState) Current() peer.PeerNode {
 	return ps.current
 }
 
-// AddPeer adds if not exists
-func (ps *PeerState) AddPeer(pe peer.PeerNode) {
-	if !ps.IsKnownPeer(pe) {
-		key := pe.TcpAddress()
-		logger.Debug("Found new peer", "peer", key)
-		ps.knownPeers[key] = pe
+// AddPeerOrUpdate adds if not exists
+func (ps *PeerState) AddPeerOrUpdate(pe peer.PeerNode) {
+	if pe.IP == ps.current.IP && pe.Port == ps.current.Port {
+		return
 	}
+
+	key := pe.TcpAddress()
+	p, isKnowMembers := ps.knownPeers[key]
+	if isKnowMembers {
+		p.Account = pe.Account
+	} else {
+		logger.Debug("found new peer", "peer", key)
+		p = pe
+	}
+	ps.knownPeers[key] = p
 }
 
 func (ps *PeerState) RemovePeer(pe peer.PeerNode) {
@@ -59,13 +70,6 @@ func (ps *PeerState) KnownPeers() []peer.PeerNode {
 		out = append(out, item)
 	}
 	return out
-}
-func (ps *PeerState) IsKnownPeer(pe peer.PeerNode) bool {
-	if pe.IP == ps.current.IP && pe.Port == ps.current.Port {
-		return true
-	}
-	_, isKnowMembers := ps.knownPeers[pe.TcpAddress()]
-	return isKnowMembers
 }
 
 func (ps *PeerState) doSync() {
@@ -109,17 +113,21 @@ func (ps *PeerState) joinKnownPeers(pe peer.PeerNode) error {
 		logger.Debug("peer connected, early return", "pe", pe)
 		return nil
 	}
-	uri := AddPeerReq{
+	body := AddPeerReq{
 		IP:    ps.Current().IP,
 		Port:  ps.Current().Port,
 		Miner: ps.Current().Account,
-	}.AsReqURI(endpointAddPeer)
+	}
+	buf, err := jsonx.Marshal(body)
+	if err != nil {
+		return err
+	}
 	url := fmt.Sprintf(
 		"http://%s%s",
 		pe.TcpAddress(),
-		uri,
+		endpointAddPeer,
 	)
-	res, err := http.Get(url)
+	res, err := http.Post(url, ContentTypeJSON, bytes.NewReader(buf))
 	if err != nil {
 		return fmt.Errorf("get req failed: %w", err)
 	}
@@ -169,7 +177,7 @@ func (ps *PeerState) syncBlocks(pe peer.PeerNode, ss *StatusResp) error {
 
 func (ps *PeerState) syncKnownPeers(pe peer.PeerNode, ss *StatusResp) error {
 	for _, maybeNewPeer := range ss.KnownPeers {
-		ps.AddPeer(maybeNewPeer)
+		ps.AddPeerOrUpdate(maybeNewPeer)
 	}
 	return nil
 }

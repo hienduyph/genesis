@@ -44,7 +44,7 @@ func (tx *TxHandler) Add(r *http.Request) (interface{}, error) {
 	}
 
 	t := database.NewTx(
-		database.Account(in.From),
+		database.NewAccount(in.From),
 		database.NewAccount(in.To),
 		in.Value,
 		in.Data,

@@ -2,13 +2,13 @@ package node
 
 import (
 	"fmt"
+	"io"
 	"net/http"
-	"net/url"
 
 	"github.com/hienduyph/genesis/database"
 	"github.com/hienduyph/genesis/node/peer"
-	"github.com/hienduyph/genesis/utils/coders"
 	"github.com/hienduyph/goss/errorx"
+	"github.com/hienduyph/goss/jsonx"
 	"github.com/hienduyph/goss/logger"
 )
 
@@ -33,18 +33,13 @@ type AddPeerReq struct {
 	Miner database.Account `json:"miner"`
 }
 
-func (r AddPeerReq) AsReqURI(endpoint string) string {
-	u := make(url.Values)
-	if e := coders.EncodeQuery(r, u); e != nil {
-		logger.Error(e, "encode peer req failed")
-	}
-	return fmt.Sprintf("%s?%s", endpoint, u.Encode())
-
-}
-
 func (s *PeerHandler) Add(r *http.Request) (interface{}, error) {
 	req := new(AddPeerReq)
-	if err := coders.DecodeQuery(req, r.URL.Query()); err != nil {
+	buf, err := io.ReadAll(r.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read body failed: %w. `%s`", errorx.ErrBadInput, err.Error())
+	}
+	if err := jsonx.Unmarshal(buf, req); err != nil {
 		return nil, fmt.Errorf("input input: `%s`; %w", err.Error(), errorx.ErrBadInput)
 	}
 
@@ -55,6 +50,6 @@ func (s *PeerHandler) Add(r *http.Request) (interface{}, error) {
 		IsActive: true,
 		Account:  req.Miner,
 	}
-	s.peerState.AddPeer(p)
+	s.peerState.AddPeerOrUpdate(p)
 	return successResp, nil
 }
