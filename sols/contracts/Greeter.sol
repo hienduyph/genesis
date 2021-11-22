@@ -1,22 +1,40 @@
-//SPDX-License-Identifier: Unlicense
-pragma solidity ^0.8.0;
+//SPDX-License-Identifier: MIT
+pragma solidity ^0.8.4;
 
+import "hardhat/console.sol";
 import "hardhat/console.sol";
 
 contract Greeter {
-    string private greeting;
+    string private value;
 
-    constructor(string memory _greeting) {
-        console.log("Deploying a Greeter with greeting:", _greeting);
-        greeting = _greeting;
+    Person[] private people;
+
+    struct Person {
+        string _firstName;
+        string _lastName;
     }
 
-    function greet() public view returns (string memory) {
-        return greeting;
+    constructor() {
+        value = "hello world";
     }
 
-    function setGreeting(string memory _greeting) public {
-        console.log("Changing greeting from '%s' to '%s'", greeting, _greeting);
-        greeting = _greeting;
+    function get() public view returns (string memory) {
+        return value;
+    }
+
+    function set(string memory _value) public {
+        value = _value;
+    }
+
+    function addPerson(string memory _first, string memory _last) public {
+        people.push(Person(_first, _last));
+    }
+
+    function peoples() public view returns (Person[] memory) {
+        return people;
+    }
+
+    function totalPeople() public view returns (uint256) {
+        return people.length;
     }
 }
