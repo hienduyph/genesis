@@ -9,21 +9,30 @@ task("accounts", "Prints the list of accounts", async (_, hre) => {
   const accounts = await hre.ethers.getSigners();
 
   for (const account of accounts) {
-    console.log(account.address);
+    console.log(`${account.address} -> ${await account.getBalance()}`);
   }
 });
 
-const conf: HardhatUserConfig = {
-  solidity: "0.8.9",
-  networks: {
-    ropsten: {
-      url: `${process.env.ALCHEMYAPI_URI}${process.env.ALCHEMYAPI_API_KEY}`,
-      accounts: [`0x${process.env.ACCOUNT_PRIVATE_KEY}`],
-    },
+const net = {
+  ropsten: {
+    url: `${process.env.ROPSTEN_ALCHEMYAPI}`,
+    accounts: [`0x${process.env.ACCOUNT_PRIVATE_KEY}`],
   },
+  kovan: {
+    url: `${process.env.KOVAN_ALCHEMYAPI}`,
+    accounts: [`0x${process.env.ACCOUNT_PRIVATE_KEY}`],
+  },
+  rinkeby: {
+    url: `${process.env.RINKEBY_ALCHEMYAPI}`,
+    accounts: [`0x${process.env.ACCOUNT_PRIVATE_KEY}`],
+  },
+};
+
+const conf: HardhatUserConfig = {
+  solidity: "0.8.10",
+  networks: net,
   etherscan: {
     apiKey: process.env.ETHERSCAN_API_KEY,
-
   },
 };
 

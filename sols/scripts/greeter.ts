@@ -19,7 +19,7 @@ async function interact() {
 	const addr = process.env.CONTRACT_ADDR || '';
 	const Contract = await ethers.getContractFactory("Greeter");
 	// let interacts with tokens
-	const cont = await Contract.attach(addr);
+	const cont = Contract.attach(addr);
 
 	const before = await cont.get();
 	console.log("Before settings", before);
