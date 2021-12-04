@@ -13,18 +13,20 @@ task("accounts", "Prints the list of accounts", async (_, hre) => {
   }
 });
 
+const pkey = process.env.ACCOUNT_PRIVATE_KEYS?.split(",") || [];
+
 const net = {
   ropsten: {
     url: `${process.env.ROPSTEN_ALCHEMYAPI}`,
-    accounts: [`0x${process.env.ACCOUNT_PRIVATE_KEY}`],
+    accounts: pkey,
   },
   kovan: {
     url: `${process.env.KOVAN_ALCHEMYAPI}`,
-    accounts: [`0x${process.env.ACCOUNT_PRIVATE_KEY}`],
+    accounts: pkey,
   },
   rinkeby: {
     url: `${process.env.RINKEBY_ALCHEMYAPI}`,
-    accounts: [`0x${process.env.ACCOUNT_PRIVATE_KEY}`],
+    accounts: pkey,
   },
 };
 
