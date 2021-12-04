@@ -55,10 +55,18 @@ async function play(addr: string) {
   await lottery.end();
 
   console.log("Waiting the lottery to calc winner");
-  await new Promise(r => setTimeout(r, 60000));
 
-  console.log(`Winner is ${await lottery.winner()}`);
+  while (true) {
+    await new Promise(r => setTimeout(r, 10000));
 
+    console.log("Checking calc done!");
+    const w = await lottery.winner();
+    if (w.toString() === "0x0000000000000000000000000000000000000000") {
+      continue
+    }
+    console.log(`Winner is ${w}`);
+    return;
+  }
 }
 
 main();
