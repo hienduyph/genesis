@@ -1,9 +1,10 @@
-import { ethers } from "hardhat";
-import conf from "../lib/kovan";
+import { ethers, network } from "hardhat";
+import net from "../lib/network";
 
 describe("Lottery Testings", () => {
   it("Deploy full steps", async () => {
     const [owner] = await ethers.getSigners();
+    const conf = net[network.name];
 
     console.log(`Deploy using ${owner.address} with balance ${await owner.getBalance()}`)
 

@@ -1,14 +1,20 @@
-import { ethers } from "hardhat";
-import conf from "../lib/kovan";
+import { ethers, network } from "hardhat";
+
+import { sleep } from "../lib/core";
+import { transfer } from "../lib/link";
+import net from "../lib/network";
 import { ask } from "../lib/prompt";
+
+const conf = net[network.name];
 
 async function main() {
   const [owner] = await ethers.getSigners();
   console.log(`Deploy using ${owner.address} with balance ${await owner.getBalance()}`)
 
+
   const Token = await ethers.getContractFactory("Lottery");
 
-  if ("y" !== await ask("Are you ready")) {
+  if ("y" !== await ask("Are you ready (y/n)")) {
     console.log("Good bye!");
     return
   }
@@ -24,32 +30,28 @@ async function main() {
 
   console.log(`Token deploy at ${tok.address}`);
   // let's transfer some LINK for the contract addr
-  console.log(`Please send mimimun ${conf._fee} LINK to ${tok.address}`);
-  const v = await ask("Enter OK after done")
-  if (v !== "OK") {
-    console.log("Skip playing with the contract");
-    return
-  }
+  await transfer(conf._link, tok.address, conf._fee);
+
   play(tok.address);
 }
 
 async function play(addr: string) {
-  const [owner, acc1, acc2] = await ethers.getSigners();
+  const accs = await ethers.getSigners();
   const Contract = await ethers.getContractFactory("Lottery");
   const lottery = Contract.attach(addr);
 
   console.log("Start the lottery");
   await lottery.start();
 
-  // now let's enter
-  console.log("Owner enters")
-  await lottery.enter({ value: ethers.utils.parseEther("0.014") });
+  while (await lottery.state() !== 0) {
+    console.log("Wait for lottery active...");
+    await sleep(2);
+  }
 
-  console.log(`Enters ${acc1.address}`);
-  await lottery.connect(acc1).enter({ value: ethers.utils.parseEther("0.013") });
-
-  console.log(`Enters ${acc2.address}}`);
-  await lottery.connect(acc2).enter({ value: ethers.utils.parseEther("0.013") });
+  for (const acc of accs) {
+    console.log(`Enters ${acc.address}`)
+    await lottery.connect(acc).enter({ value: ethers.utils.parseEther("0.014") });
+  }
 
   console.log("End the lottery");
   await lottery.end();
@@ -57,7 +59,7 @@ async function play(addr: string) {
   console.log("Waiting the lottery to calc winner");
 
   while (true) {
-    await new Promise(r => setTimeout(r, 10000));
+    await sleep(10);
 
     console.log("Checking calc done!");
     const w = await lottery.winner();

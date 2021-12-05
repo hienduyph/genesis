@@ -5,6 +5,7 @@ pragma solidity ^0.8.0;
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "@chainlink/contracts/src/v0.8/VRFConsumerBase.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+
 import "hardhat/console.sol";
 
 contract Lottery is Ownable, VRFConsumerBase {
@@ -22,6 +23,8 @@ contract Lottery is Ownable, VRFConsumerBase {
     LOTTERY_STATE public state;
     uint256 public fee;
     bytes32 public keyHash;
+
+    event RequestedRandomness(bytes32 requestID);
 
     constructor(
         address feedAddr,
@@ -66,7 +69,7 @@ contract Lottery is Ownable, VRFConsumerBase {
         require(state == LOTTERY_STATE.OPEN, "Lottery is not open yet!");
 
         state = LOTTERY_STATE.CALCULATING_WINNER;
-        requestRandomness(keyHash, fee);
+        emit RequestedRandomness(requestRandomness(keyHash, fee));
     }
 
     /**
